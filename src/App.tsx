@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import {
   Trip,
@@ -26,10 +26,16 @@ import { SettingsModal } from './components/modals/SettingsModal';
 import { ValidationIssuesModal } from './components/modals/ValidationIssuesModal';
 import { TripHistoryModal } from './components/modals/TripHistoryModal';
 import { ResetTripModal } from './components/modals/ResetTripModal';
+import { ShareModal } from './components/modals/ShareModal';
+import { SharedTripPreviewModal } from './components/modals/SharedTripPreviewModal';
+import { CollabNotificationToast, CollabToastData } from './components/common/CollabNotificationToast';
 import { CompletedTripBanner } from './components/layout/CompletedTripBanner';
 import { VisionExtractionResult } from './services/ai/visionExtractor';
 import { defaultOptimizer } from './services/optimization/optimizer';
 import { tripStorage } from './services/storage/tripStorageService';
+import { decodeTripFromShareUrl } from './services/sharing/shareService';
+import { collabEngine } from './services/collaboration/collabEngine';
+import { CollaborationState } from './services/collaboration/types';
 import {
   ListOrdered,
   Calendar as CalendarIcon,
@@ -52,6 +58,9 @@ const AppInner: React.FC = () => {
   });
 
   const [historyIndex, setHistoryIndex] = useState<number>(0);
+  const historyIndexRef = useRef(historyIndex);
+  historyIndexRef.current = historyIndex;
+
   const currentTrip: Trip = history[historyIndex] || savedTrips[0] || getEuropeGrandTourSampleTrip();
 
   // Sync active trip changes to trip storage library
@@ -65,12 +74,16 @@ const AppInner: React.FC = () => {
     }
   }, [currentTrip]);
 
-  const updateTrip = useCallback((newTrip: Trip) => {
+  const updateTrip = useCallback((newTrip: Trip, broadcastDescription?: string) => {
     setHistory((prev) => {
       const updated = prev.slice(0, historyIndex + 1);
       return [...updated, newTrip];
     });
     setHistoryIndex((prev) => prev + 1);
+
+    if (collabEngine.getState().isConnected) {
+      collabEngine.broadcastTripUpdate(newTrip, broadcastDescription || 'itinerario actualizado');
+    }
   }, [historyIndex]);
 
   const handleUndo = () => {
@@ -107,6 +120,83 @@ const AppInner: React.FC = () => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isResetOpen, setIsResetOpen] = useState(false);
   const [tripToReset, setTripToReset] = useState<Trip | null>(null);
+
+  // Sharing & Collaboration State
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [shareInitialTab, setShareInitialTab] = useState<'share' | 'collab'>('share');
+  const [sharedTripToPreview, setSharedTripToPreview] = useState<Trip | null>(null);
+  const [collabState, setCollabState] = useState<CollaborationState>(() => collabEngine.getState());
+  const [collabToast, setCollabToast] = useState<CollabToastData | null>(null);
+
+  // Keep collab engine currentTripRef up to date
+  useEffect(() => {
+    collabEngine.setCurrentTripRef(currentTrip);
+  }, [currentTrip]);
+
+  // Subscribe to collab engine events
+  useEffect(() => {
+    const unsubscribe = collabEngine.subscribe({
+      onStateChange: (state) => {
+        setCollabState(state);
+      },
+      onTripRemoteUpdate: (trip, sender, description) => {
+        setHistory((prev) => {
+          const updated = prev.slice(0, historyIndexRef.current + 1);
+          return [...updated, trip];
+        });
+        setHistoryIndex((prev) => prev + 1);
+
+        setCollabToast({
+          id: String(Date.now()),
+          senderName: sender.name,
+          senderColor: sender.color,
+          message: `${sender.name} actualizó el itinerario: ${description || 'cambios aplicados'}`,
+          type: 'update',
+        });
+      },
+      onCollaboratorJoined: (collaborator) => {
+        setCollabToast({
+          id: String(Date.now()),
+          senderName: collaborator.name,
+          senderColor: collaborator.color,
+          message: `${collaborator.name} se unió al itinerario`,
+          type: 'join',
+        });
+      },
+      onCollaboratorLeft: (collaborator) => {
+        setCollabToast({
+          id: String(Date.now()),
+          senderName: collaborator.name,
+          senderColor: collaborator.color,
+          message: `${collaborator.name} salió del itinerario`,
+          type: 'leave',
+        });
+      },
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Inspect URL hash on mount for #share= and #collab=
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#share=')) {
+      const encoded = hash.slice(7);
+      const decodedTrip = decodeTripFromShareUrl(encoded);
+      if (decodedTrip) {
+        setSharedTripToPreview(decodedTrip);
+      }
+    } else if (hash.startsWith('#collab=')) {
+      const roomCode = hash.slice(8).trim().toUpperCase();
+      if (roomCode) {
+        collabEngine.joinRoom(roomCode);
+        setIsShareOpen(true);
+        setShareInitialTab('collab');
+      }
+    }
+  }, []);
 
   // Upload review temporary state
   const [extractedReviewData, setExtractedReviewData] = useState<VisionExtractionResult | null>(null);
@@ -251,6 +341,35 @@ const AppInner: React.FC = () => {
     updateTrip({ ...currentTrip, preferences });
   };
 
+  const handleAcceptSharedTrip = (trip: Trip) => {
+    const updated = tripStorage.upsertTripInHistory(trip);
+    tripStorage.setActiveTripId(trip.id);
+    setSavedTrips(updated);
+    setActiveTripId(trip.id);
+    setHistory([trip]);
+    setHistoryIndex(0);
+    handleClearSelection();
+    setSharedTripToPreview(null);
+    if (window.location.hash.startsWith('#share=')) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  };
+
+  const handleViewOnlySharedTrip = (trip: Trip) => {
+    setHistory([trip]);
+    setHistoryIndex(0);
+    handleClearSelection();
+    setSharedTripToPreview(null);
+    if (window.location.hash.startsWith('#share=')) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  };
+
+  const handleOpenShare = (tab: 'share' | 'collab' = 'share') => {
+    setShareInitialTab(tab);
+    setIsShareOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
       {/* 1. App Header */}
@@ -260,6 +379,9 @@ const AppInner: React.FC = () => {
         canRedo={historyIndex < history.length - 1}
         activeView={activeView}
         tripsCount={savedTrips.length}
+        isCollabConnected={collabState.isConnected}
+        collabRoomId={collabState.roomId}
+        collabPeersCount={collabState.peers.length}
         onUndo={handleUndo}
         onRedo={handleRedo}
         onChangeView={setActiveView}
@@ -269,6 +391,7 @@ const AppInner: React.FC = () => {
         onOpenHistoryModal={() => setIsHistoryOpen(true)}
         onOpenResetModal={() => handleOpenResetForTrip(currentTrip)}
         onResetToDemoTrip={handleResetToDemo}
+        onOpenShareModal={handleOpenShare}
       />
 
       {/* Completed Trip Notification Banner */}
@@ -635,6 +758,33 @@ const AppInner: React.FC = () => {
         isOpen={isValidationOpen}
         onClose={() => setIsValidationOpen(false)}
         issues={validationIssues}
+      />
+
+      <ShareModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        trip={currentTrip}
+        initialTab={shareInitialTab}
+      />
+
+      {sharedTripToPreview && (
+        <SharedTripPreviewModal
+          isOpen={!!sharedTripToPreview}
+          onClose={() => {
+            setSharedTripToPreview(null);
+            if (window.location.hash.startsWith('#share=')) {
+              window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
+          }}
+          sharedTrip={sharedTripToPreview}
+          onAcceptAndSave={handleAcceptSharedTrip}
+          onViewOnly={handleViewOnlySharedTrip}
+        />
+      )}
+
+      <CollabNotificationToast
+        toast={collabToast}
+        onDismiss={() => setCollabToast(null)}
       />
     </div>
   );

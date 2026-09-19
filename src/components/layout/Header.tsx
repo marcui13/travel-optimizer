@@ -14,6 +14,8 @@ import {
   Calendar as CalendarIcon,
   ListOrdered,
   FolderClock,
+  Share2,
+  Users,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -22,6 +24,9 @@ interface HeaderProps {
   canRedo: boolean;
   activeView: 'split' | 'map' | 'timeline' | 'calendar';
   tripsCount?: number;
+  isCollabConnected?: boolean;
+  collabRoomId?: string | null;
+  collabPeersCount?: number;
   onUndo: () => void;
   onRedo: () => void;
   onChangeView: (view: 'split' | 'map' | 'timeline' | 'calendar') => void;
@@ -31,6 +36,7 @@ interface HeaderProps {
   onOpenHistoryModal: () => void;
   onOpenResetModal: () => void;
   onResetToDemoTrip: () => void;
+  onOpenShareModal: (tab?: 'share' | 'collab') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -39,6 +45,9 @@ export const Header: React.FC<HeaderProps> = ({
   canRedo,
   activeView,
   tripsCount = 1,
+  isCollabConnected = false,
+  collabRoomId = null,
+  collabPeersCount = 0,
   onUndo,
   onRedo,
   onChangeView,
@@ -48,6 +57,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenHistoryModal,
   onOpenResetModal,
   onResetToDemoTrip,
+  onOpenShareModal,
 }) => {
   const { lang, setLang, t } = useI18n();
 
@@ -239,6 +249,32 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-slate-950 text-purple-300 border border-slate-700">
             {tripsCount}
           </span>
+        </button>
+
+        {/* Collaborative Room Live Pill (if connected) */}
+        {isCollabConnected && (
+          <button
+            onClick={() => onOpenShareModal('collab')}
+            title={lang === 'es' ? `Sala colaborativa activa: ${collabRoomId}` : `Active collaboration room: ${collabRoomId}`}
+            className="bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-300 border border-emerald-500/50 px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors shadow-sm animate-fade-in"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-mono font-bold tracking-wide">{collabRoomId}</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-900 text-emerald-200 border border-emerald-700/60 flex items-center gap-1">
+              <Users className="w-2.5 h-2.5 text-emerald-300" />
+              {collabPeersCount + 1}
+            </span>
+          </button>
+        )}
+
+        {/* Share & Collaborate Button */}
+        <button
+          onClick={() => onOpenShareModal('share')}
+          title={lang === 'es' ? 'Compartir o colaborar en este viaje' : 'Share or collaborate on this trip'}
+          className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700 shadow-sm"
+        >
+          <Share2 className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="hidden sm:inline">{lang === 'es' ? 'Compartir' : 'Share'}</span>
         </button>
 
         {/* Reset Active Trip */}
