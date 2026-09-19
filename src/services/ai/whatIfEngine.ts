@@ -21,6 +21,248 @@ export interface WhatIfResponse {
   modelName?: string;
 }
 
+export const ACTION_WORDS = new Set([
+  'agregar',
+  'sumar',
+  'anadir',
+  'incluir',
+  'visitar',
+  'poner',
+  'meter',
+  'quitar',
+  'eliminar',
+  'sacar',
+  'borrar',
+  'remover',
+  'cambiar',
+  'reemplazar',
+  'sustituir',
+  'swap',
+  'replace',
+  'change',
+  'cambio',
+  'cambios',
+  'hacer',
+  'hacerlo',
+  'viaje',
+  'viajes',
+  'itinerario',
+  'itinerarios',
+  'destino',
+  'destinos',
+  'ciudad',
+  'ciudades',
+  'recorridad',
+  'recorrido',
+  'recorridos',
+  'recorrida',
+  'dias',
+  'noches',
+  'trenes',
+  'vuelos',
+  'transporte',
+  'ruta',
+  'rutas',
+  'por',
+  'para',
+  'con',
+  'favor',
+  'quiero',
+  'puedo',
+  'podria',
+  'gustaria',
+  'hola',
+  'add',
+  'remove',
+  'trip',
+  'days',
+  'nights',
+  'more',
+  'less',
+  'want',
+  'could',
+  'please',
+]);
+
+export function detectCityInText(text: string): string | null {
+  const normalized = text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  const cityAliasMap: Record<string, string> = {
+    // Belgium
+    brujas: 'Bruges',
+    bruges: 'Bruges',
+    bruselas: 'Brussels',
+    brussels: 'Brussels',
+    gante: 'Ghent',
+    ghent: 'Ghent',
+    amberes: 'Antwerp',
+    antwerp: 'Antwerp',
+    belgica: 'Brussels',
+    belgium: 'Brussels',
+    // France
+    paris: 'Paris',
+    niza: 'Nice',
+    nice: 'Nice',
+    lyon: 'Lyon',
+    burdeos: 'Bordeaux',
+    bordeaux: 'Bordeaux',
+    marsella: 'Marseille',
+    marseille: 'Marseille',
+    estrasburgo: 'Strasbourg',
+    strasbourg: 'Strasbourg',
+    // Spain
+    madrid: 'Madrid',
+    barcelona: 'Barcelona',
+    seville: 'Seville',
+    sevilla: 'Seville',
+    granada: 'Granada',
+    cordoba: 'Cordoba',
+    valencia: 'Valencia',
+    bilbao: 'Bilbao',
+    sansebastian: 'San Sebastian',
+    malaga: 'Malaga',
+    toledo: 'Toledo',
+    // Italy
+    rome: 'Rome',
+    roma: 'Rome',
+    florence: 'Florence',
+    florencia: 'Florence',
+    venice: 'Venice',
+    venecia: 'Venice',
+    milan: 'Milan',
+    napoles: 'Naples',
+    naples: 'Naples',
+    bolonia: 'Bologna',
+    bologna: 'Bologna',
+    // Germany & Central Europe
+    berlin: 'Berlin',
+    munich: 'Munich',
+    frankfurt: 'Frankfurt',
+    francfort: 'Frankfurt',
+    cologne: 'Cologne',
+    colonia: 'Cologne',
+    vienna: 'Vienna',
+    viena: 'Vienna',
+    salzburg: 'Salzburg',
+    salzburgo: 'Salzburg',
+    prague: 'Prague',
+    praga: 'Prague',
+    budapest: 'Budapest',
+    // Netherlands
+    amsterdam: 'Amsterdam',
+    rotterdam: 'Rotterdam',
+    roterdam: 'Rotterdam',
+    // UK & Ireland
+    london: 'London',
+    londres: 'London',
+    edinburgh: 'Edinburgh',
+    edimburgo: 'Edinburgh',
+    dublin: 'Dublin',
+    // Portugal & Switzerland & Greece & Croatia
+    lisbon: 'Lisbon',
+    lisboa: 'Lisbon',
+    porto: 'Porto',
+    oporto: 'Porto',
+    zurich: 'Zurich',
+    geneva: 'Geneva',
+    ginebra: 'Geneva',
+    athens: 'Athens',
+    atenas: 'Athens',
+    dubrovnik: 'Dubrovnik',
+    split: 'Split',
+    croacia: 'Dubrovnik',
+    croatia: 'Dubrovnik',
+    // Japan
+    tokyo: 'Tokyo',
+    tokio: 'Tokyo',
+    kyoto: 'Kyoto',
+    kioto: 'Kyoto',
+    osaka: 'Osaka',
+  };
+
+  for (const [alias, canonical] of Object.entries(cityAliasMap)) {
+    if (new RegExp(`\\b${alias}\\b`, 'i').test(normalized)) {
+      return canonical;
+    }
+  }
+
+  // Fallback: check capitalized words, explicitly ignoring action words
+  const words = text.split(/[\s,?.!¿¡]+/);
+  for (const w of words) {
+    const normW = w.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (w.length > 3 && /^[A-Z]/.test(w) && !ACTION_WORDS.has(normW)) {
+      return w;
+    }
+  }
+  return null;
+}
+
+export function matchesCity(dest: Destination, targetCity: string): boolean {
+  if (!dest || !targetCity) return false;
+  const tNorm = targetCity.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const dNorm = dest.name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (tNorm === dNorm) return true;
+  if (dest.location?.name) {
+    const locNorm = dest.location.name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (tNorm === locNorm) return true;
+  }
+  const resolvedTarget = resolveLocation(targetCity);
+  if (resolvedTarget.name) {
+    const resNorm = resolvedTarget.name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (resNorm === dNorm) return true;
+  }
+  return false;
+}
+
+export function cleanCityCandidate(str: string): string {
+  return str
+    .replace(/\b(?:la\s+)?ciudad\s+de\b/gi, '')
+    .replace(/\b(?:del?|de\s+la|en\s+el|from|out\s+of)\s+(?:recorridad|recorrido|ruta|viaje|itinerario|trip|route)\b/gi, '')
+    .replace(/\b(?:de\s+)?(?:recorridad|recorrido)\b/gi, '')
+    .replace(/\b(?:ciudad|city)\b/gi, '')
+    .replace(/^[¿¡!?,.]+|[¿¡!?,.]+$/g, '')
+    .trim();
+}
+
+export interface CitySwapIntent {
+  cityToRemove: string;
+  cityToAdd: string;
+}
+
+export function detectCitySwap(text: string): CitySwapIntent | null {
+  const clean = text.trim();
+
+  const patterns = [
+    // 1. Spanish: "cambiar / reemplazar / sustituir [ciudad1] por / con [ciudad2]"
+    /(?:quiero\s+)?(?:cambiar|reemplazar|sustituir|swap)\s+(?:a\s+|la\s+ciudad\s+(?:de\s+)?)?([a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+?)\s+(?:por|con|para|to|for|with)\s+(?:a\s+|la\s+ciudad\s+(?:de\s+)?)?([a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+)/i,
+    // 2. Spanish: "sacar / quitar / eliminar [ciudad1] y poner / agregar / sumar [ciudad2]"
+    /(?:quiero\s+)?(?:sacar|quitar|eliminar|borrar|remove|drop)\s+(?:a\s+|la\s+ciudad\s+(?:de\s+)?)?([a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+?)\s+(?:y|and)\s+(?:poner|agregar|sumar|anadir|incluir|add|put|include)\s+(?:a\s+|la\s+ciudad\s+(?:de\s+)?)?([a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+)/i,
+    // 3. English: "swap / replace / change [city1] for / with / to [city2]"
+    /(?:i\s+want\s+to\s+)?(?:swap|replace|change)\s+([a-zA-Z\s]+?)\s+(?:for|with|to)\s+([a-zA-Z\s]+)/i,
+    // 4. English: "remove / drop [city1] and add / put [city2]"
+    /(?:i\s+want\s+to\s+)?(?:remove|drop)\s+([a-zA-Z\s]+?)\s+and\s+(?:add|put|include)\s+([a-zA-Z\s]+)/i,
+  ];
+
+  for (const pat of patterns) {
+    const match = clean.match(pat);
+    if (match) {
+      const rawRemove = cleanCityCandidate(match[1]);
+      const rawAdd = cleanCityCandidate(match[2]);
+
+      const cityRemove = detectCityInText(rawRemove) || rawRemove;
+      const cityAdd = detectCityInText(rawAdd) || rawAdd;
+
+      if (cityRemove && cityAdd && cityRemove.toLowerCase() !== cityAdd.toLowerCase()) {
+        return { cityToRemove: cityRemove, cityToAdd: cityAdd };
+      }
+    }
+  }
+  return null;
+}
+
 /**
  * Handles conversational What-If modifications on the canonical Trip object (English & Spanish)
  * Uses high-power LLM when configured, falling back seamlessly to deterministic geometry & heuristics.
@@ -176,10 +418,75 @@ async function internalExecuteWhatIf(
           };
         }
 
+        if (
+          (llmResult.action === 'replace_destination' ||
+            (Boolean(llmResult.citiesToRemove?.length) && Boolean(llmResult.citiesToAdd?.length))) &&
+          llmResult.citiesToRemove?.[0] &&
+          llmResult.citiesToAdd?.[0]
+        ) {
+          const cityToRemove = llmResult.citiesToRemove[0];
+          const targetCityName = llmResult.citiesToAdd[0];
+          const removeIndex = trip.destinations.findIndex((d) => matchesCity(d, cityToRemove));
+
+          if (removeIndex !== -1) {
+            const newDestLoc = resolveLocation(targetCityName);
+            const originalDest = trip.destinations[removeIndex];
+            const newDest: Destination = {
+              id: `dest-whatif-${Date.now()}`,
+              name: newDestLoc.name,
+              location: newDestLoc,
+              plannedNights: originalDest.plannedNights || 2,
+              minimumNights: 2,
+              priority: 'medium',
+              reasons: [isSpanish ? `Reemplazo de ${originalDest.name} vía IA` : `Replaced ${originalDest.name} via AI`],
+            };
+
+            const swappedDestinations = [...trip.destinations];
+            swappedDestinations[removeIndex] = newDest;
+
+            const preferTrain = trip.preferences?.transportationPreference?.includes('train') ?? true;
+            const { itineraryDays, transportationSegments } = buildItineraryFromDestinations(
+              swappedDestinations,
+              trip.startDate,
+              trip.endDate,
+              trip.itinerary.days,
+              preferTrain
+            );
+
+            const intermediateTrip: Trip = {
+              ...trip,
+              destinations: swappedDestinations,
+              transportation: transportationSegments,
+              itinerary: { days: itineraryDays },
+              updatedAt: new Date().toISOString(),
+            };
+
+            const optResult = await defaultOptimizer.optimize(intermediateTrip, { profile: 'efficient' });
+            const proposedTrip: Trip = {
+              ...intermediateTrip,
+              destinations: optResult.proposedDestinations || intermediateTrip.destinations,
+              transportation: optResult.proposedTransportation || intermediateTrip.transportation,
+              itinerary: optResult.proposedItinerary || intermediateTrip.itinerary,
+              updatedAt: new Date().toISOString(),
+            };
+
+            return {
+              userIntent: llmResult.intentTitle,
+              explanation: llmResult.explanation,
+              impactSummary: llmResult.impactSummary,
+              actionable: true,
+              proposedTrip,
+              tradeOffs: llmResult.tradeOffs,
+              engineUsed: activeProvider,
+              modelName: activeModel,
+            };
+          }
+        }
+
         if (llmResult.action === 'remove_destination' && llmResult.citiesToRemove && llmResult.citiesToRemove.length > 0) {
           const toRemoveSet = new Set(llmResult.citiesToRemove.map((c) => c.toLowerCase()));
           const destinationsFiltered = trip.destinations.filter(
-            (d) => !toRemoveSet.has(d.name.toLowerCase())
+            (d) => !toRemoveSet.has(d.name.toLowerCase()) && !toRemoveSet.has(d.location?.name?.toLowerCase() || '')
           );
 
           if (destinationsFiltered.length < trip.destinations.length && destinationsFiltered.length >= 1) {
@@ -192,18 +499,29 @@ async function internalExecuteWhatIf(
               preferTrain
             );
 
+            const intermediateTrip: Trip = {
+              ...trip,
+              destinations: destinationsFiltered,
+              transportation: transportationSegments,
+              itinerary: { days: itineraryDays },
+              updatedAt: new Date().toISOString(),
+            };
+
+            const optResult = await defaultOptimizer.optimize(intermediateTrip, { profile: 'efficient' });
+            const proposedTrip: Trip = {
+              ...intermediateTrip,
+              destinations: optResult.proposedDestinations || intermediateTrip.destinations,
+              transportation: optResult.proposedTransportation || intermediateTrip.transportation,
+              itinerary: optResult.proposedItinerary || intermediateTrip.itinerary,
+              updatedAt: new Date().toISOString(),
+            };
+
             return {
               userIntent: llmResult.intentTitle,
               explanation: llmResult.explanation,
               impactSummary: llmResult.impactSummary,
               actionable: true,
-              proposedTrip: {
-                ...trip,
-                destinations: destinationsFiltered,
-                transportation: transportationSegments,
-                itinerary: { days: itineraryDays },
-                updatedAt: new Date().toISOString(),
-              },
+              proposedTrip,
               tradeOffs: llmResult.tradeOffs,
               engineUsed: activeProvider,
               modelName: activeModel,
@@ -267,7 +585,237 @@ async function internalExecuteWhatIf(
   }
 
   // 2. Built-in Local Heuristic Solver (Zero-latency / Offline / Fallback)
-  // 2.1 ADD DESTINATION (e.g. "Add Vienna", "What if I add Croatia?", "Sumar Croacia", "Agregar Viena")
+  // 2.1 SWAP / REPLACE DESTINATION (e.g. "quiero cambiar x ciudad por y ciudad", "cambiar París por Brujas", "sacar X y poner Y")
+  const swapIntent = detectCitySwap(userInput);
+  if (swapIntent) {
+    const { cityToRemove, cityToAdd } = swapIntent;
+
+    const removeIndex = trip.destinations.findIndex((d) => matchesCity(d, cityToRemove));
+    if (removeIndex === -1) {
+      return {
+        userIntent: isSpanish
+          ? `Cambiar ${cityToRemove} por ${cityToAdd}`
+          : `Swap ${cityToRemove} for ${cityToAdd}`,
+        explanation: isSpanish
+          ? `"${cityToRemove}" no se encuentra en tu lista actual de destinos.`
+          : `"${cityToRemove}" was not found in your current destination list.`,
+        impactSummary: isSpanish
+          ? `Destinos actuales: ${trip.destinations.map((d) => d.name).join(', ')}.`
+          : `Current destinations: ${trip.destinations.map((d) => d.name).join(', ')}.`,
+        actionable: false,
+      };
+    }
+
+    const originalDest = trip.destinations[removeIndex];
+    const newLoc = resolveLocation(cityToAdd);
+
+    // Check if new destination already exists in trip (other than the slot being replaced)
+    const alreadyExists = trip.destinations.some(
+      (d, idx) => idx !== removeIndex && matchesCity(d, newLoc.name)
+    );
+    if (alreadyExists) {
+      return {
+        userIntent: isSpanish
+          ? `Cambiar ${originalDest.name} por ${newLoc.name}`
+          : `Swap ${originalDest.name} for ${newLoc.name}`,
+        explanation: isSpanish
+          ? `¡${newLoc.name} ya forma parte de tu itinerario actual!`
+          : `${newLoc.name} is already part of your active itinerary!`,
+        impactSummary: isSpanish ? 'Sin modificaciones requeridas.' : 'No modifications required.',
+        actionable: false,
+      };
+    }
+
+    const newDest: Destination = {
+      id: `dest-whatif-${Date.now()}`,
+      name: newLoc.name,
+      location: newLoc,
+      plannedNights: originalDest.plannedNights || 2,
+      minimumNights: 2,
+      priority: 'medium',
+      reasons: [
+        isSpanish
+          ? `Reemplazo de ${originalDest.name} vía What-If`
+          : `Replaced ${originalDest.name} via What-If`,
+      ],
+    };
+
+    const swappedDestinations = [...trip.destinations];
+    swappedDestinations[removeIndex] = newDest;
+
+    const preferTrain = trip.preferences?.transportationPreference?.includes('train') ?? true;
+    const { itineraryDays, transportationSegments } = buildItineraryFromDestinations(
+      swappedDestinations,
+      trip.startDate,
+      trip.endDate,
+      trip.itinerary.days,
+      preferTrain
+    );
+
+    const intermediateTrip: Trip = {
+      ...trip,
+      destinations: swappedDestinations,
+      transportation: transportationSegments,
+      itinerary: { days: itineraryDays },
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Automatic route reordering and optimization
+    const optResult = await defaultOptimizer.optimize(intermediateTrip, { profile: 'efficient' });
+    const proposedTrip: Trip = {
+      ...intermediateTrip,
+      destinations: optResult.proposedDestinations || intermediateTrip.destinations,
+      transportation: optResult.proposedTransportation || intermediateTrip.transportation,
+      itinerary: optResult.proposedItinerary || intermediateTrip.itinerary,
+      updatedAt: new Date().toISOString(),
+    };
+
+    return {
+      userIntent: isSpanish
+        ? `Cambiar ${originalDest.name} por ${newLoc.name} y reoptimizar recorrido`
+        : `Swap ${originalDest.name} for ${newLoc.name} and re-optimize route`,
+      explanation: isSpanish
+        ? `Se sustituyó ${originalDest.name} por ${newLoc.name}. El recorrido completo fue reordenado y optimizado automáticamente para garantizar la secuencia geográfica más coherente, recalculando trenes de alta velocidad y respetando tu llegada final.`
+        : `Replaced ${originalDest.name} with ${newLoc.name}. The entire itinerary was automatically re-ordered and optimized for optimal geographic flow, recalculating rail connections and preserving arrival deadlines.`,
+      impactSummary: isSpanish
+        ? `Cambio: ${originalDest.name} ➔ ${newLoc.name}. Recorrido reoptimizado automáticamente con nuevas conexiones.`
+        : `Swapped: ${originalDest.name} ➔ ${newLoc.name}. Route automatically re-optimized with updated transit legs.`,
+      actionable: true,
+      proposedTrip,
+      tradeOffs: isSpanish
+        ? [
+            `Se eliminó ${originalDest.name} e ingresó ${newLoc.name} al itinerario.`,
+            `El orden de las ciudades se optimizó automáticamente para minimizar horas de tránsito.`,
+            `Tramos de transporte actualizados para conectar las ciudades adyacentes.`,
+          ]
+        : [
+            `Removed ${originalDest.name} and added ${newLoc.name} to itinerary.`,
+            `City sequence automatically optimized to minimize travel hours.`,
+            `Transportation segments refreshed for the new geographic route.`,
+          ],
+    };
+  }
+
+  // 2.2 REMOVE DESTINATION (e.g. "quiero eliminar x ciudad de recorridad", "Quitar Berlín", "Sacar Praga", "Drop Barcelona")
+  const isRemoval =
+    normalized.includes('remove') ||
+    normalized.includes('drop') ||
+    normalized.includes('skip') ||
+    normalized.includes('delete') ||
+    normalized.includes('quitar') ||
+    normalized.includes('eliminar') ||
+    normalized.includes('sacar') ||
+    normalized.includes('borrar') ||
+    normalized.includes('remover');
+
+  if (isRemoval) {
+    let targetCity: string | null = null;
+    const removeMatch = userInput.match(
+      /(?:quitar|eliminar|sacar|borrar|remover|remove|drop|delete)\s+(?:a\s+|la\s+ciudad\s+(?:de\s+)?)?([a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+?)(?:\s+(?:de|del|de\s+la|from)\s+(?:recorridad|recorrido|ruta|viaje|itinerario)|$|[¿¡!?,.])/i
+    );
+    if (removeMatch && removeMatch[1]) {
+      const candidate = cleanCityCandidate(removeMatch[1]);
+      if (candidate && !ACTION_WORDS.has(candidate.toLowerCase())) {
+        targetCity = detectCityInText(candidate) || candidate;
+      }
+    }
+
+    if (!targetCity) {
+      targetCity = detectCityInText(userInput);
+    }
+
+    if (!targetCity) {
+      return {
+        userIntent: isSpanish ? 'Eliminar Destino' : 'Remove Destination',
+        explanation: isSpanish
+          ? '¿Qué destino te gustaría remover de tu itinerario?'
+          : 'Which destination would you like to remove from your itinerary?',
+        impactSummary: isSpanish
+          ? 'Por favor indica la ciudad (ej: "Quiero eliminar Barcelona de recorridad").'
+          : 'Please specify the city name (e.g., "Remove Berlin").',
+        actionable: false,
+      };
+    }
+
+    const filtered = trip.destinations.filter((d) => !matchesCity(d, targetCity!));
+    if (filtered.length === trip.destinations.length) {
+      return {
+        userIntent: isSpanish ? `Quitar ${targetCity}` : `Remove ${targetCity}`,
+        explanation: isSpanish
+          ? `"${targetCity}" no se encuentra en tu lista actual de destinos.`
+          : `"${targetCity}" was not found in your current destination list.`,
+        impactSummary: isSpanish
+          ? `Destinos actuales: ${trip.destinations.map((d) => d.name).join(', ')}.`
+          : `Current destinations: ${trip.destinations.map((d) => d.name).join(', ')}.`,
+        actionable: false,
+      };
+    }
+
+    if (filtered.length < 1) {
+      return {
+        userIntent: isSpanish ? `Quitar ${targetCity}` : `Remove ${targetCity}`,
+        explanation: isSpanish
+          ? 'No es posible dejar el itinerario sin ningún destino.'
+          : 'Cannot remove all destinations from the itinerary.',
+        impactSummary: isSpanish ? 'Se requiere al menos 1 destino.' : 'At least 1 destination required.',
+        actionable: false,
+      };
+    }
+
+    const preferTrain = trip.preferences?.transportationPreference?.includes('train') ?? true;
+    const { itineraryDays, transportationSegments } = buildItineraryFromDestinations(
+      filtered,
+      trip.startDate,
+      trip.endDate,
+      trip.itinerary.days,
+      preferTrain
+    );
+
+    const intermediateTrip: Trip = {
+      ...trip,
+      destinations: filtered,
+      transportation: transportationSegments,
+      itinerary: { days: itineraryDays },
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Automatic route reordering and optimization
+    const optResult = await defaultOptimizer.optimize(intermediateTrip, { profile: 'efficient' });
+    const proposedTrip: Trip = {
+      ...intermediateTrip,
+      destinations: optResult.proposedDestinations || intermediateTrip.destinations,
+      transportation: optResult.proposedTransportation || intermediateTrip.transportation,
+      itinerary: optResult.proposedItinerary || intermediateTrip.itinerary,
+      updatedAt: new Date().toISOString(),
+    };
+
+    return {
+      userIntent: isSpanish
+        ? `Eliminar ${targetCity} y reoptimizar recorrido`
+        : `Remove ${targetCity} and re-optimize route`,
+      explanation: isSpanish
+        ? `Se removió ${targetCity} del itinerario y el recorrido restante fue reordenado y optimizado automáticamente. Se eliminaron desvíos geográficos, ahorrando horas de tránsito y reconectando los tramos restantes de forma continua.`
+        : `Removed ${targetCity} from the itinerary and automatically re-ordered and optimized the remaining route. Backtracking was eliminated, saving transit hours and seamlessly linking remaining legs.`,
+      impactSummary: isSpanish
+        ? `-1 destino (${targetCity}). Recorrido reoptimizado automáticamente con conexiones directas.`
+        : `-1 destination (${targetCity}). Route automatically re-optimized with direct transit connections.`,
+      actionable: true,
+      proposedTrip,
+      tradeOffs: isSpanish
+        ? [
+            `Se quitó ${targetCity} del mapa y la línea de tiempo.`,
+            `El recorrido se reordenó automáticamente para maximizar la eficiencia geográfica.`,
+            `Noches liberadas redistribuidas armónicamente respetando tu llegada final (${trip.endDate}).`,
+          ]
+        : [
+            `Removed ${targetCity} from map & timeline.`,
+            `Route sequence automatically optimized for geographic efficiency.`,
+            `Freed nights redistributed across remaining stops respecting your finish date (${trip.endDate}).`,
+          ],
+    };
+  }
+
+  // 2.3 ADD DESTINATION (e.g. "Add Vienna", "What if I add Croatia?", "Sumar Croacia", "Agregar Viena")
   if (
     normalized.includes('add') ||
     normalized.includes('fit') ||
@@ -419,82 +967,6 @@ async function internalExecuteWhatIf(
         : [
             `Stay in adjacent cities re-balanced to maintain fixed finish date (${trip.endDate}).`,
             `Added 1 seamless rail or short flight connection.`,
-          ],
-    };
-  }
-
-  // 2. REMOVE DESTINATION (e.g. "Remove Berlin", "Quitar Berlín", "Sacar Praga", "Drop Barcelona")
-  if (
-    normalized.includes('remove') ||
-    normalized.includes('drop') ||
-    normalized.includes('skip') ||
-    normalized.includes('delete') ||
-    normalized.includes('quitar') ||
-    normalized.includes('eliminar') ||
-    normalized.includes('sacar') ||
-    normalized.includes('borrar')
-  ) {
-    const targetCity = detectCityInText(userInput);
-    if (!targetCity) {
-      return {
-        userIntent: isSpanish ? 'Eliminar Destino' : 'Remove Destination',
-        explanation: isSpanish
-          ? '¿Qué destino te gustaría remover de tu itinerario?'
-          : 'Which destination would you like to remove from your itinerary?',
-        impactSummary: isSpanish
-          ? 'Por favor indica la ciudad (ej: "Quitar Berlín").'
-          : 'Please specify the city name (e.g., "Remove Berlin").',
-        actionable: false,
-      };
-    }
-
-    const filtered = trip.destinations.filter((d) => d.name.toLowerCase() !== targetCity.toLowerCase());
-    if (filtered.length === trip.destinations.length) {
-      return {
-        userIntent: isSpanish ? `Quitar ${targetCity}` : `Remove ${targetCity}`,
-        explanation: isSpanish
-          ? `${targetCity} no se encuentra en tu lista actual de destinos.`
-          : `${targetCity} was not found in your current destination list.`,
-        impactSummary: isSpanish ? 'Sin modificaciones realizadas.' : 'No modifications applied.',
-        actionable: false,
-      };
-    }
-
-    const preferTrain = trip.preferences?.transportationPreference?.includes('train') ?? true;
-    const { itineraryDays, transportationSegments } = buildItineraryFromDestinations(
-      filtered,
-      trip.startDate,
-      trip.endDate,
-      trip.itinerary.days,
-      preferTrain
-    );
-
-    const proposedTrip: Trip = {
-      ...trip,
-      destinations: filtered,
-      transportation: transportationSegments,
-      itinerary: { days: itineraryDays },
-      updatedAt: new Date().toISOString(),
-    };
-
-    return {
-      userIntent: isSpanish ? `Quitar ${targetCity}` : `Remove ${targetCity}`,
-      explanation: isSpanish
-        ? `Se removió ${targetCity}. Los tramos de transporte fueron reconectados directamente entre las ciudades adyacentes, ahorrando ~3-4 horas de tránsito y eliminando una mudanza de hotel.`
-        : `Removed ${targetCity}. Re-linked transportation segments directly between surrounding cities, saving approximately 3-4 hours of transit time and eliminating one hotel transfer.`,
-      impactSummary: isSpanish
-        ? `-1 cambio de hotel, tiempo ahorrado redistribuido para profundizar en el resto de los destinos.`
-        : `-1 hotel change, saved transit time redistributed to expand time in remaining destinations.`,
-      actionable: true,
-      proposedTrip,
-      tradeOffs: isSpanish
-        ? [
-            `Se quitó ${targetCity} del mapa y la línea de tiempo.`,
-            `Noches liberadas repartidas en paradas de mayor prioridad.`,
-          ]
-        : [
-            `Removed ${targetCity} from map & timeline.`,
-            `Extra nights distributed across remaining priority hubs.`,
           ],
     };
   }
@@ -667,164 +1139,4 @@ export async function executeWhatIfScenario(
     engineUsed: result.engineUsed || 'local',
     modelName: result.modelName || 'Local Engine',
   };
-}
-
-const ACTION_WORDS = new Set([
-  'agregar',
-  'sumar',
-  'anadir',
-  'incluir',
-  'visitar',
-  'poner',
-  'meter',
-  'quitar',
-  'eliminar',
-  'sacar',
-  'borrar',
-  'remover',
-  'hacer',
-  'hacerlo',
-  'viaje',
-  'itinerario',
-  'destino',
-  'ciudad',
-  'dias',
-  'noches',
-  'trenes',
-  'vuelos',
-  'transporte',
-  'ruta',
-  'por',
-  'favor',
-  'quiero',
-  'puedo',
-  'podria',
-  'gustaria',
-  'hola',
-  'add',
-  'remove',
-  'trip',
-  'days',
-  'nights',
-  'more',
-  'less',
-  'want',
-  'could',
-  'please',
-]);
-
-export function detectCityInText(text: string): string | null {
-  const normalized = text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-
-  const cityAliasMap: Record<string, string> = {
-    // Belgium
-    brujas: 'Bruges',
-    bruges: 'Bruges',
-    bruselas: 'Brussels',
-    brussels: 'Brussels',
-    gante: 'Ghent',
-    ghent: 'Ghent',
-    amberes: 'Antwerp',
-    antwerp: 'Antwerp',
-    belgica: 'Brussels',
-    belgium: 'Brussels',
-    // France
-    paris: 'Paris',
-    niza: 'Nice',
-    nice: 'Nice',
-    lyon: 'Lyon',
-    burdeos: 'Bordeaux',
-    bordeaux: 'Bordeaux',
-    marsella: 'Marseille',
-    marseille: 'Marseille',
-    estrasburgo: 'Strasbourg',
-    strasbourg: 'Strasbourg',
-    // Spain
-    madrid: 'Madrid',
-    barcelona: 'Barcelona',
-    seville: 'Seville',
-    sevilla: 'Seville',
-    granada: 'Granada',
-    cordoba: 'Cordoba',
-    valencia: 'Valencia',
-    bilbao: 'Bilbao',
-    sansebastian: 'San Sebastian',
-    malaga: 'Malaga',
-    toledo: 'Toledo',
-    // Italy
-    rome: 'Rome',
-    roma: 'Rome',
-    florence: 'Florence',
-    florencia: 'Florence',
-    venice: 'Venice',
-    venecia: 'Venice',
-    milan: 'Milan',
-    napoles: 'Naples',
-    naples: 'Naples',
-    bolonia: 'Bologna',
-    bologna: 'Bologna',
-    // Germany & Central Europe
-    berlin: 'Berlin',
-    munich: 'Munich',
-    frankfurt: 'Frankfurt',
-    francfort: 'Frankfurt',
-    cologne: 'Cologne',
-    colonia: 'Cologne',
-    vienna: 'Vienna',
-    viena: 'Vienna',
-    salzburg: 'Salzburg',
-    salzburgo: 'Salzburg',
-    prague: 'Prague',
-    praga: 'Prague',
-    budapest: 'Budapest',
-    // Netherlands
-    amsterdam: 'Amsterdam',
-    rotterdam: 'Rotterdam',
-    roterdam: 'Rotterdam',
-    // UK & Ireland
-    london: 'London',
-    londres: 'London',
-    edinburgh: 'Edinburgh',
-    edimburgo: 'Edinburgh',
-    dublin: 'Dublin',
-    // Portugal & Switzerland & Greece & Croatia
-    lisbon: 'Lisbon',
-    lisboa: 'Lisbon',
-    porto: 'Porto',
-    oporto: 'Porto',
-    zurich: 'Zurich',
-    geneva: 'Geneva',
-    ginebra: 'Geneva',
-    athens: 'Athens',
-    atenas: 'Athens',
-    dubrovnik: 'Dubrovnik',
-    split: 'Split',
-    croacia: 'Dubrovnik',
-    croatia: 'Dubrovnik',
-    // Japan
-    tokyo: 'Tokyo',
-    tokio: 'Tokyo',
-    kyoto: 'Kyoto',
-    kioto: 'Kyoto',
-    osaka: 'Osaka',
-  };
-
-  for (const [alias, canonical] of Object.entries(cityAliasMap)) {
-    if (new RegExp(`\\b${alias}\\b`, 'i').test(normalized)) {
-      return canonical;
-    }
-  }
-
-  // Fallback: check capitalized words, explicitly ignoring action words
-  const words = text.split(/[\s,?.!¿¡]+/);
-  for (const w of words) {
-    const normW = w.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    if (w.length > 3 && /^[A-Z]/.test(w) && !ACTION_WORDS.has(normW)) {
-      return w;
-    }
-  }
-  return null;
 }

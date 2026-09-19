@@ -41,7 +41,7 @@ export const GEMINI_WHAT_IF_SCHEMA = {
     intentTitle: { type: 'string' },
     action: {
       type: 'string',
-      enum: ['add_destination', 'remove_destination', 'reorder', 'change_pacing', 'custom_advice'],
+      enum: ['add_destination', 'remove_destination', 'replace_destination', 'reorder', 'change_pacing', 'custom_advice'],
     },
     citiesToAdd: {
       type: 'array',

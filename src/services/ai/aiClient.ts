@@ -438,15 +438,16 @@ The user asks: "${userInput}".
 
 Analyze their intent and return strictly valid JSON matching this schema:
 {
-  "intentTitle": "Brief title of the intent (e.g. 'Agregar Brujas' or 'Make it more relaxed')",
-  "action": "add_destination" | "remove_destination" | "reorder" | "change_pacing" | "custom_advice",
+  "intentTitle": "Brief title of the intent (e.g. 'Agregar Brujas', 'Cambiar París por Brujas', 'Eliminar Barcelona' or 'Make it more relaxed')",
+  "action": "add_destination" | "remove_destination" | "replace_destination" | "reorder" | "change_pacing" | "custom_advice",
   "citiesToAdd": ["CityName"],
   "citiesToRemove": ["CityName"],
   "travelStyle": "relaxed" | "balanced" | "intense",
-  "explanation": "Clear, friendly explanation in the SAME LANGUAGE as the user (Spanish if query is in Spanish, English if in English). Explain why this proposal works, what changes, and how the arrival commitment is respected in 2-3 sentences.",
-  "impactSummary": "Concise bullet summary of the change (e.g. '+1 destino, 2 noches en Brujas. Trenes rebalanceados.')",
+  "explanation": "Clear, friendly explanation in the SAME LANGUAGE as the user (Spanish if query is in Spanish, English if in English). If replacing or removing a city, explain that the route has been automatically reordered and optimized to maintain geographic continuity and respect arrival commitments in 2-3 sentences.",
+  "impactSummary": "Concise bullet summary of the change (e.g. 'Cambio de ciudad y reoptimización automática de la ruta.')",
   "tradeOffs": ["Trade-off 1", "Trade-off 2"]
-}`;
+}
+Important: If the user wants to substitute or replace a city (e.g. 'cambiar X por Y', 'reemplazar X por Y', 'swap X for Y', 'sacar X y poner Y'), set action to 'replace_destination', citiesToRemove to [X], and citiesToAdd to [Y].`;
 
   const fallback: WhatIfAiIntentResult | null = null;
   return callActiveLlmJson<WhatIfAiIntentResult | null>(

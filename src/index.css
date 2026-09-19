@@ -21,7 +21,8 @@
   z-index: 1;
 }
 
-.custom-map-pin {
+.custom-map-pin,
+.custom-map-pin-container {
   background: transparent !important;
   border: none !important;
 }

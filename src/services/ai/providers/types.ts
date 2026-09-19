@@ -25,7 +25,7 @@ export interface ProviderCatalogItem {
 
 export interface WhatIfAiIntentResult {
   intentTitle: string;
-  action: 'add_destination' | 'remove_destination' | 'reorder' | 'change_pacing' | 'custom_advice';
+  action: 'add_destination' | 'remove_destination' | 'replace_destination' | 'reorder' | 'change_pacing' | 'custom_advice';
   citiesToAdd?: string[];
   citiesToRemove?: string[];
   travelStyle?: 'relaxed' | 'balanced' | 'intense';

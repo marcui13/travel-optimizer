@@ -82,7 +82,22 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     comparisonLayerRef.current = compGroup;
     mapInstanceRef.current = map;
 
+    // Observe container resizing (e.g. view switch between split and full map)
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    if (mapContainerRef.current) {
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
+    // Ensure map tiles render when switching views or after DOM calculation
+    const t1 = setTimeout(() => map.invalidateSize(), 100);
+    const t2 = setTimeout(() => map.invalidateSize(), 300);
+
     return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      resizeObserver.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -115,14 +130,27 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       const seq = String(index + 1).padStart(2, '0');
       const nights = dest.plannedNights || 2;
 
+      // 1.1 Precise Geographic Center Anchor Dot
+      const centerDot = L.circleMarker([lat, lng], {
+        radius: isSelected ? 6 : 4,
+        color: isSelected ? '#ffffff' : '#059669',
+        fillColor: isSelected ? '#10b981' : '#34d399',
+        fillOpacity: 1,
+        weight: isSelected ? 3 : 2,
+        pane: 'markerPane',
+      });
+      centerDot.on('click', () => {
+        onSelectDestination?.(dest.id);
+      });
+      markersGroup.addLayer(centerDot);
+
+      // 1.2 Floating Badge Pin mathematically centered on the exact coordinate (0, 0)
       const markerHtml = `
-        <div class="relative group cursor-pointer transform transition-all duration-200 ${
-          isSelected ? 'scale-125 z-50' : 'hover:scale-110 z-10'
-        }">
-          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full shadow-lg border text-xs font-semibold backdrop-blur-md ${
+        <div style="position: absolute; bottom: 0; left: 0; transform: translate(-50%, -8px); display: flex; flex-direction: column; align-items: center; white-space: nowrap; pointer-events: none;">
+          <div class="pointer-events-auto cursor-pointer flex items-center gap-1.5 px-2.5 py-1 rounded-full shadow-2xl border text-xs font-semibold backdrop-blur-md transition-all duration-150 ${
             isSelected
-              ? 'bg-emerald-600 text-white border-white ring-4 ring-emerald-500/30'
-              : 'bg-slate-900/90 text-slate-100 border-slate-700 hover:border-emerald-500'
+              ? 'bg-emerald-600 text-white border-white ring-4 ring-emerald-500/30 scale-110 z-50'
+              : 'bg-slate-900/95 text-slate-100 border-slate-700 hover:border-emerald-500 hover:scale-105 z-10'
           }">
             <span class="flex items-center justify-center w-5 h-5 rounded-full ${
               isSelected ? 'bg-white text-emerald-700 font-bold' : 'bg-emerald-500/20 text-emerald-400'
@@ -136,18 +164,18 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               ${nights}n
             </span>
           </div>
-          <!-- Marker pin pointer -->
-          <div class="w-2 h-2 mx-auto -mt-1 rotate-45 border-r border-b ${
+          <!-- Exact Pointer Caret anchored to (0, 0) -->
+          <div class="w-2 h-2 -mt-1 rotate-45 border-r border-b ${
             isSelected ? 'bg-emerald-600 border-white' : 'bg-slate-900 border-slate-700'
           }"></div>
         </div>
       `;
 
       const customIcon = L.divIcon({
-        className: 'custom-map-pin',
+        className: 'custom-map-pin-container',
         html: markerHtml,
-        iconSize: [110, 36],
-        iconAnchor: [55, 36],
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
       });
 
       const marker = L.marker([lat, lng], { icon: customIcon });

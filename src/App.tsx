@@ -290,7 +290,7 @@ const AppInner: React.FC = () => {
       <main className="flex-1 p-3 sm:p-4 max-w-[1680px] w-full mx-auto flex flex-col gap-4">
         {/* Full Map View */}
         {activeView === 'map' && (
-          <div className="flex-1 min-h-[680px] rounded-xl overflow-hidden shadow-2xl">
+          <div className="w-full h-[calc(100vh-170px)] min-h-[620px] rounded-xl overflow-hidden shadow-2xl flex flex-col">
             <InteractiveMap
               destinations={currentTrip.destinations}
               transportation={currentTrip.transportation}
