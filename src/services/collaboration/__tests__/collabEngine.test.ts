@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { CollabEngine, collabEngine } from '../collabEngine';
+import { collabEngine } from '../collabEngine';
 import { getEuropeGrandTourSampleTrip } from '../../../domain/tripDefaults';
 
 describe('Real-Time Collaboration Engine (CollabEngine)', () => {

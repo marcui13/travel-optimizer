@@ -33,7 +33,7 @@ import { CompletedTripBanner } from './components/layout/CompletedTripBanner';
 import { VisionExtractionResult } from './services/ai/visionExtractor';
 import { defaultOptimizer } from './services/optimization/optimizer';
 import { tripStorage } from './services/storage/tripStorageService';
-import { decodeTripFromShareUrl } from './services/sharing/shareService';
+import { decodeTripFromShareUrl, extractSharePayloadFromLocation } from './services/sharing/shareService';
 import { collabEngine } from './services/collaboration/collabEngine';
 import { CollaborationState } from './services/collaboration/types';
 import {
@@ -44,15 +44,43 @@ import {
   Sparkles,
 } from 'lucide-react';
 
+const initialSharedTrip: Trip | null = (() => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const payload = extractSharePayloadFromLocation();
+    if (payload) {
+      return decodeTripFromShareUrl(payload);
+    }
+  } catch (err) {
+    console.warn('[App] Failed to parse initial shared trip from location:', err);
+  }
+  return null;
+})();
+
 const AppInner: React.FC = () => {
   const { t } = useI18n();
 
   // 1. Persistent Trips Library
-  const [savedTrips, setSavedTrips] = useState<Trip[]>(() => tripStorage.loadTripHistory());
-  const [activeTripId, setActiveTripId] = useState<string>(() => tripStorage.getActiveTripId(savedTrips));
+  const [savedTrips, setSavedTrips] = useState<Trip[]>(() => {
+    const loaded = tripStorage.loadTripHistory();
+    if (initialSharedTrip) {
+      return tripStorage.upsertTripInHistory(initialSharedTrip);
+    }
+    return loaded;
+  });
+  const [activeTripId, setActiveTripId] = useState<string>(() => {
+    if (initialSharedTrip) {
+      tripStorage.setActiveTripId(initialSharedTrip.id);
+      return initialSharedTrip.id;
+    }
+    return tripStorage.getActiveTripId(savedTrips);
+  });
 
   // 2. Core Canonical Active Trip State & Undo/Redo History
   const [history, setHistory] = useState<Trip[]>(() => {
+    if (initialSharedTrip) {
+      return [initialSharedTrip];
+    }
     const active = savedTrips.find((t) => t.id === activeTripId) || savedTrips[0] || getEuropeGrandTourSampleTrip();
     return [active];
   });
@@ -179,23 +207,90 @@ const AppInner: React.FC = () => {
     };
   }, []);
 
-  // Inspect URL hash on mount for #share= and #collab=
+  // Direct opening of shared trip on mount
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.startsWith('#share=')) {
-      const encoded = hash.slice(7);
-      const decodedTrip = decodeTripFromShareUrl(encoded);
-      if (decodedTrip) {
-        setSharedTripToPreview(decodedTrip);
+    if (initialSharedTrip) {
+      try {
+        confetti({
+          particleCount: 65,
+          spread: 75,
+          origin: { y: 0.6 },
+        });
+      } catch {
+        // ignore
       }
-    } else if (hash.startsWith('#collab=')) {
-      const roomCode = hash.slice(8).trim().toUpperCase();
+
+      setCollabToast({
+        id: 'shared-trip-initial',
+        senderName: 'Travel Optimizer',
+        senderColor: '#10b981',
+        message: `Itinerario "${initialSharedTrip.name}" abierto directamente y guardado en tus viajes`,
+        type: 'update',
+      });
+
+      // Clean the URL hash or search so it looks clean: https://travel-optimizer-tau.vercel.app/
+      if (typeof window !== 'undefined' && (window.location.hash.includes('#share=') || window.location.search.includes('share='))) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } else if (typeof window !== 'undefined' && window.location.hash.startsWith('#collab=')) {
+      const roomCode = window.location.hash.slice(8).trim().toUpperCase();
       if (roomCode) {
         collabEngine.joinRoom(roomCode);
         setIsShareOpen(true);
         setShareInitialTab('collab');
       }
     }
+  }, []);
+
+  // Listen for hashchange so opening or pasting a share link while in the app opens it directly
+  useEffect(() => {
+    const handleHashChange = () => {
+      const payload = extractSharePayloadFromLocation();
+      if (payload) {
+        const decoded = decodeTripFromShareUrl(payload);
+        if (decoded) {
+          const updated = tripStorage.upsertTripInHistory(decoded);
+          tripStorage.setActiveTripId(decoded.id);
+          setSavedTrips(updated);
+          setActiveTripId(decoded.id);
+          setHistory([decoded]);
+          setHistoryIndex(0);
+          handleClearSelection();
+
+          try {
+            confetti({
+              particleCount: 65,
+              spread: 75,
+              origin: { y: 0.6 },
+            });
+          } catch {
+            // ignore
+          }
+
+          setCollabToast({
+            id: String(Date.now()),
+            senderName: 'Travel Optimizer',
+            senderColor: '#10b981',
+            message: `Itinerario "${decoded.name}" abierto directamente`,
+            type: 'update',
+          });
+
+          if (typeof window !== 'undefined') {
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        }
+      } else if (typeof window !== 'undefined' && window.location.hash.startsWith('#collab=')) {
+        const roomCode = window.location.hash.slice(8).trim().toUpperCase();
+        if (roomCode) {
+          collabEngine.joinRoom(roomCode);
+          setIsShareOpen(true);
+          setShareInitialTab('collab');
+        }
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   // Upload review temporary state

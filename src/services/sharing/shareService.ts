@@ -32,6 +32,27 @@ export function fromBase64Url(base64url: string): string {
   return new TextDecoder().decode(bytes);
 }
 
+export const DEPLOYED_VERCEL_URL = 'https://travel-optimizer-tau.vercel.app';
+
+/**
+ * Returns the canonical base URL for sharing trips.
+ * Prioritizes the production Vercel deployment URL so links work consistently
+ * across all devices, mobile browsers, and messaging apps.
+ */
+export function getShareBaseUrl(): string {
+  if (typeof window === 'undefined') {
+    return DEPLOYED_VERCEL_URL;
+  }
+  const origin = window.location.origin;
+  // If running locally in development, use the official Vercel domain so links work anywhere
+  if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('0.0.0.0')) {
+    return DEPLOYED_VERCEL_URL;
+  }
+  // Otherwise, use current origin + pathname
+  const path = window.location.pathname.replace(/\/+$/, '');
+  return `${origin}${path}`;
+}
+
 /**
  * Generates a full shareable URL containing the compressed trip payload in the URL hash
  */
@@ -39,11 +60,8 @@ export function encodeTripToShareUrl(trip: Trip, baseUrl?: string): string {
   const serialized = JSON.stringify(trip);
   const encoded = toBase64Url(serialized);
 
-  const base =
-    baseUrl ||
-    (typeof window !== 'undefined'
-      ? `${window.location.origin}${window.location.pathname}`
-      : 'https://travel-optimizer.app/');
+  const rawBase = baseUrl || getShareBaseUrl();
+  const base = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
 
   return `${base}#share=${encoded}`;
 }
@@ -59,15 +77,17 @@ export function decodeTripFromShareUrl(urlOrHash: string): Trip | null {
       payload = urlOrHash.split('#share=')[1]?.split('&')[0] || '';
     } else if (urlOrHash.includes('?share=')) {
       payload = urlOrHash.split('?share=')[1]?.split('#')[0]?.split('&')[0] || '';
-    } else if (urlOrHash.startsWith('share=')) {
-      payload = urlOrHash.slice('share='.length);
+    } else if (urlOrHash.includes('share=')) {
+      payload = urlOrHash.split('share=')[1]?.split('&')[0]?.split('#')[0] || '';
     } else {
       payload = urlOrHash;
     }
 
     if (!payload) return null;
 
-    const json = fromBase64Url(payload.trim());
+    // Handle percent-encoding if the URL was encoded by an external app
+    const cleanPayload = decodeURIComponent(payload.trim());
+    const json = fromBase64Url(cleanPayload);
     const parsed = JSON.parse(json);
 
     // Basic structure validation
@@ -86,6 +106,29 @@ export function decodeTripFromShareUrl(urlOrHash: string): Trip | null {
     console.warn('[ShareService] Failed to decode trip from share payload:', err);
     return null;
   }
+}
+
+/**
+ * Extracts raw share payload from browser window location (hash or query)
+ */
+export function extractSharePayloadFromLocation(): string | null {
+  if (typeof window === 'undefined') return null;
+
+  const hash = window.location.hash;
+  if (hash.includes('#share=')) {
+    return hash.split('#share=')[1]?.split('&')[0] || null;
+  }
+  if (hash.startsWith('#/share=')) {
+    return hash.slice('#/share='.length).split('&')[0] || null;
+  }
+
+  const search = window.location.search;
+  if (search.includes('share=')) {
+    const params = new URLSearchParams(search);
+    return params.get('share');
+  }
+
+  return null;
 }
 
 /**

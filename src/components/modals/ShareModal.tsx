@@ -16,11 +16,13 @@ import {
   LogOut,
   ArrowRight,
   ShieldCheck,
+  ExternalLink,
 } from 'lucide-react';
 import {
   encodeTripToShareUrl,
   generateTripSummaryText,
   exportTripToFile,
+  getShareBaseUrl,
 } from '../../services/sharing/shareService';
 import { collabEngine } from '../../services/collaboration/collabEngine';
 import { CollaborationState } from '../../services/collaboration/types';
@@ -83,7 +85,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
 
   const shareUrl = encodeTripToShareUrl(trip);
   const collabInviteUrl = collabState.roomId
-    ? `${typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}#collab=${collabState.roomId}`
+    ? `${getShareBaseUrl()}#collab=${collabState.roomId}`
     : '';
 
   const handleCopyLink = async () => {
@@ -230,9 +232,15 @@ export const ShareModal: React.FC<ShareModalProps> = ({
           <div className="space-y-4 text-xs">
             {/* Share link box */}
             <div className="space-y-1.5">
-              <label className="block text-slate-300 font-medium">
-                {lang === 'es' ? 'Enlace directo de viaje' : 'Direct travel share link'}
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-slate-300 font-medium">
+                  {lang === 'es' ? 'Enlace directo de viaje' : 'Direct travel share link'}
+                </label>
+                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-mono">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  travel-optimizer-tau.vercel.app
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
@@ -252,11 +260,20 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                   {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedLink ? (lang === 'es' ? '¡Copiado!' : 'Copied!') : (lang === 'es' ? 'Copiar' : 'Copy')}</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => window.open(shareUrl, '_blank', 'noopener,noreferrer')}
+                  title={lang === 'es' ? 'Abrir este viaje directamente en una nueva pestaña del navegador' : 'Open this trip directly in a new browser tab'}
+                  className="px-3 py-2 rounded-lg font-semibold flex items-center gap-1.5 shrink-0 bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-700/60 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="hidden sm:inline">{lang === 'es' ? 'Abrir' : 'Open'}</span>
+                </button>
               </div>
               <p className="text-[11px] text-slate-500 leading-relaxed">
                 {lang === 'es'
-                  ? 'El itinerario completo está autocontenido en el enlace. Cualquiera que lo abra podrá previsualizarlo y guardarlo en su biblioteca.'
-                  : 'The entire itinerary is self-contained in the URL. Anyone with this link can preview and save it to their library.'}
+                  ? 'El itinerario completo está autocontenido en el enlace. Al abrirlo en el navegador se cargará directamente el itinerario listo para explorar.'
+                  : 'The complete itinerary is self-contained in the URL. Opening it in any browser directly loads the itinerary ready to explore.'}
               </p>
             </div>
 

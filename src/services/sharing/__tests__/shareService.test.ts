@@ -6,9 +6,10 @@ import {
   decodeTripFromShareUrl,
   generateTripSummaryText,
   parseTripImportJson,
+  DEPLOYED_VERCEL_URL,
+  getShareBaseUrl,
 } from '../shareService';
 import { getEuropeGrandTourSampleTrip } from '../../../domain/tripDefaults';
-import { Trip } from '../../../domain/types';
 
 describe('Trip Sharing Service (shareService)', () => {
   const sampleTrip = getEuropeGrandTourSampleTrip();
@@ -37,8 +38,12 @@ describe('Trip Sharing Service (shareService)', () => {
   });
 
   describe('Trip URL Serialization Roundtrip', () => {
-    it('encodes a Trip into a shareable URL containing #share=', () => {
+    it('uses the canonical Vercel domain and generates #share= URL', () => {
+      expect(DEPLOYED_VERCEL_URL).toBe('https://travel-optimizer-tau.vercel.app');
+      expect(getShareBaseUrl()).toContain('https://travel-optimizer-tau.vercel.app');
+
       const url = encodeTripToShareUrl(sampleTrip);
+      expect(url).toContain('https://travel-optimizer-tau.vercel.app');
       expect(url).toContain('#share=');
       const hashPart = url.split('#share=')[1];
       expect(hashPart).toBeDefined();
