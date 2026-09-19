@@ -518,6 +518,108 @@ export const CITY_HUBS: Record<string, CityHubInfo> = {
     mainTrainStation: 'Dublin Heuston / Connolly',
     defaultDescription: 'Warm, literary Irish capital famed for Trinity College, Georgian brick squares, and Temple Bar music.',
   },
+  // Scandinavia & Nordic Capitals
+  copenhagen: {
+    name: 'Copenhagen',
+    country: 'Denmark',
+    latitude: 55.6761,
+    longitude: 12.5683,
+    cityCode: 'CPH',
+    popularAirports: ['Copenhagen Airport, Kastrup (CPH)'],
+    mainTrainStation: 'København H (Copenhagen Central)',
+    defaultDescription: 'Enchanting Danish capital famed for Nyhavn colorful townhouses, Tivoli Gardens, and cycling culture.',
+  },
+  malmo: {
+    name: 'Malmö',
+    country: 'Sweden',
+    latitude: 55.6050,
+    longitude: 13.0038,
+    cityCode: 'MMX',
+    popularAirports: ['Malmö Airport (MMX)', 'Copenhagen Airport (CPH)'],
+    mainTrainStation: 'Malmö Centralstation',
+    defaultDescription: 'Cosmopolitan southern Swedish coastal city linked to Copenhagen across the scenic Øresund Bridge.',
+  },
+  stockholm: {
+    name: 'Stockholm',
+    country: 'Sweden',
+    latitude: 59.3293,
+    longitude: 18.0686,
+    cityCode: 'ARN',
+    popularAirports: ['Stockholm Arlanda (ARN)', 'Bromma (BMA)'],
+    mainTrainStation: 'Stockholm Centralstation',
+    defaultDescription: 'Nordic capital built across 14 islands, celebrated for Gamla Stan, waterways, and world-class design.',
+  },
+  gothenburg: {
+    name: 'Gothenburg',
+    country: 'Sweden',
+    latitude: 57.7089,
+    longitude: 11.9746,
+    cityCode: 'GOT',
+    popularAirports: ['Göteborg Landvetter (GOT)'],
+    mainTrainStation: 'Göteborg Centralstation',
+    defaultDescription: 'Vibrant Swedish West Coast maritime hub with Dutch-style canals and world-class seafood.',
+  },
+  oslo: {
+    name: 'Oslo',
+    country: 'Norway',
+    latitude: 59.9139,
+    longitude: 10.7522,
+    cityCode: 'OSL',
+    popularAirports: ['Oslo Airport, Gardermoen (OSL)'],
+    mainTrainStation: 'Oslo Sentralstasjon',
+    defaultDescription: 'Scenic Norwegian fjord capital blending cutting-edge architecture with lush green forests.',
+  },
+  bergen: {
+    name: 'Bergen',
+    country: 'Norway',
+    latitude: 60.3913,
+    longitude: 5.3221,
+    cityCode: 'BGO',
+    popularAirports: ['Bergen Flesland (BGO)'],
+    mainTrainStation: 'Bergen Stasjon',
+    defaultDescription: 'Gateway to the Norwegian fjords with iconic wooden Bryggen wharf and scenic funiculars.',
+  },
+  helsinki: {
+    name: 'Helsinki',
+    country: 'Finland',
+    latitude: 60.1699,
+    longitude: 24.9384,
+    cityCode: 'HEL',
+    popularAirports: ['Helsinki-Vantaa (HEL)'],
+    mainTrainStation: 'Helsingin päärautatieasema',
+    defaultDescription: 'Seaside Finnish design capital famous for neoclassical architecture and island fortresses.',
+  },
+  // Northern Germany & Poland
+  hamburg: {
+    name: 'Hamburg',
+    country: 'Germany',
+    latitude: 53.5511,
+    longitude: 9.9937,
+    cityCode: 'HAM',
+    popularAirports: ['Hamburg Airport (HAM)'],
+    mainTrainStation: 'Hamburg Hauptbahnhof',
+    defaultDescription: 'Major northern German port city with Elbphilharmonie and historic red-brick Speicherstadt district.',
+  },
+  warsaw: {
+    name: 'Warsaw',
+    country: 'Poland',
+    latitude: 52.2297,
+    longitude: 21.0122,
+    cityCode: 'WAW',
+    popularAirports: ['Warsaw Chopin (WAW)'],
+    mainTrainStation: 'Warszawa Centralna',
+    defaultDescription: 'Dynamic Polish capital with restored historic Old Town, Royal Castle, and bustling cultural scene.',
+  },
+  krakow: {
+    name: 'Krakow',
+    country: 'Poland',
+    latitude: 50.0647,
+    longitude: 19.9450,
+    cityCode: 'KRK',
+    popularAirports: ['Kraków John Paul II (KRK)'],
+    mainTrainStation: 'Kraków Główny',
+    defaultDescription: 'Historic Polish gem boasting Wawel Castle, Europe’s largest medieval market square, and Kazimierz quarter.',
+  },
 };
 
 /**
@@ -577,6 +679,17 @@ export const SPANISH_CITY_ALIASES: Record<string, string> = {
   tokio: 'tokyo',
   kioto: 'kyoto',
   croacia: 'dubrovnik',
+  // Scandinavia & Poland
+  copenhague: 'copenhagen',
+  kobenhavn: 'copenhagen',
+  malmo: 'malmo',
+  malmoe: 'malmo',
+  estocolmo: 'stockholm',
+  gotemburgo: 'gothenburg',
+  goteborg: 'gothenburg',
+  hamburgo: 'hamburg',
+  varsovia: 'warsaw',
+  cracovia: 'krakow',
 };
 
 /**
@@ -592,6 +705,16 @@ export const COUNTRY_HUBS: Record<string, { cityKey: string; countryName: string
   switzerland: { cityKey: 'zurich', countryName: 'Switzerland' },
   croacia: { cityKey: 'dubrovnik', countryName: 'Croatia' },
   croatia: { cityKey: 'dubrovnik', countryName: 'Croatia' },
+  dinamarca: { cityKey: 'copenhagen', countryName: 'Denmark' },
+  denmark: { cityKey: 'copenhagen', countryName: 'Denmark' },
+  suecia: { cityKey: 'stockholm', countryName: 'Sweden' },
+  sweden: { cityKey: 'stockholm', countryName: 'Sweden' },
+  noruega: { cityKey: 'oslo', countryName: 'Norway' },
+  norway: { cityKey: 'oslo', countryName: 'Norway' },
+  finlandia: { cityKey: 'helsinki', countryName: 'Finland' },
+  finland: { cityKey: 'helsinki', countryName: 'Finland' },
+  polonia: { cityKey: 'warsaw', countryName: 'Poland' },
+  poland: { cityKey: 'warsaw', countryName: 'Poland' },
   espana: { cityKey: 'madrid', countryName: 'Spain' },
   spain: { cityKey: 'madrid', countryName: 'Spain' },
   francia: { cityKey: 'paris', countryName: 'France' },
@@ -705,20 +828,34 @@ export function resolveLocation(cityName: string, country?: string): Location {
   }
 
   // 5. Deterministic fallback (ZERO Math.random!)
-  // Computes a stable hash coordinate so the same city always renders in the exact same spot
+  // Computes a stable coordinate so the same city always renders in the exact same spot.
+  // If a recognized country is provided, center around that country's capital/hub!
+  let baseLat = 48.5;
+  let baseLon = 9.5;
+  if (country) {
+    const cNorm = country.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+    if (COUNTRY_HUBS[cNorm]) {
+      const cHub = CITY_HUBS[COUNTRY_HUBS[cNorm].cityKey];
+      if (cHub) {
+        baseLat = cHub.latitude;
+        baseLon = cHub.longitude;
+      }
+    }
+  }
+
   let hash = 0;
   for (let i = 0; i < trimmed.length; i++) {
     hash = (hash << 5) - hash + trimmed.charCodeAt(i);
     hash |= 0;
   }
-  const deterministicLatOffset = ((Math.abs(hash) % 1000) / 1000 - 0.5) * 4;
-  const deterministicLonOffset = ((Math.abs(hash >> 3) % 1000) / 1000 - 0.5) * 6;
+  const deterministicLatOffset = ((Math.abs(hash) % 1000) / 1000 - 0.5) * 2;
+  const deterministicLonOffset = ((Math.abs(hash >> 3) % 1000) / 1000 - 0.5) * 3;
 
   return {
     name: trimmed,
     country: country || 'Europe',
-    latitude: +(48.5 + deterministicLatOffset).toFixed(4),
-    longitude: +(9.5 + deterministicLonOffset).toFixed(4),
+    latitude: +(baseLat + deterministicLatOffset).toFixed(4),
+    longitude: +(baseLon + deterministicLonOffset).toFixed(4),
   };
 }
 

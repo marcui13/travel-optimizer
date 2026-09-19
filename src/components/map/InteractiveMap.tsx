@@ -65,10 +65,10 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       maxZoom: 14,
     });
 
-    // Clean, high-contrast carto voyager tiles
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    // Clean, high-contrast OpenStreetMap tiles with zero watermark
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      subdomains: 'abcd',
+      attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);

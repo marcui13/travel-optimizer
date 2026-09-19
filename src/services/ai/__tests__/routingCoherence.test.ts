@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveLocation } from '../../geocoding/geocodingService';
+import { resolveLocation, calculateDistanceKm } from '../../geocoding/geocodingService';
 import { detectCityInText, executeWhatIfScenario } from '../whatIfEngine';
 import { defaultOptimizer } from '../../optimization/optimizer';
 import { validateTrip } from '../../../domain/validation';
@@ -66,6 +66,46 @@ describe('Routing Coherence & Geocoding Fixes', () => {
       const locEn = resolveLocation('Belgium');
       expect(locEn.name).toBe('Brussels');
       expect(locEn.country).toBe('Belgium');
+    });
+
+    it('resolves Copenhague (Spanish) and Copenhagen (English) to Denmark with exact coordinates', () => {
+      const locEs = resolveLocation('Copenhague');
+      expect(locEs.name).toBe('Copenhagen');
+      expect(locEs.country).toBe('Denmark');
+      expect(locEs.latitude).toBeCloseTo(55.6761, 2);
+      expect(locEs.longitude).toBeCloseTo(12.5683, 2);
+
+      const locEn = resolveLocation('Copenhagen');
+      expect(locEn.name).toBe('Copenhagen');
+      expect(locEn.country).toBe('Denmark');
+      expect(locEn.latitude).toBeCloseTo(55.6761, 2);
+    });
+
+    it('resolves Malmo and Malmö (Swedish) to Sweden with exact coordinates', () => {
+      const loc1 = resolveLocation('Malmo');
+      expect(loc1.name).toBe('Malmö');
+      expect(loc1.country).toBe('Sweden');
+      expect(loc1.latitude).toBeCloseTo(55.6050, 2);
+      expect(loc1.longitude).toBeCloseTo(13.0038, 2);
+
+      const loc2 = resolveLocation('Malmö');
+      expect(loc2.name).toBe('Malmö');
+      expect(loc2.country).toBe('Sweden');
+      expect(loc2.latitude).toBeCloseTo(55.6050, 2);
+    });
+
+    it('verifies that Copenhagen and Malmo are situated in Scandinavia north of Berlin, NOT in southern Germany/Switzerland', () => {
+      const cph = resolveLocation('Copenhague');
+      const malmo = resolveLocation('Malmo');
+      const berlin = resolveLocation('Berlin');
+
+      // Berlin latitude is ~52.52; Copenhagen and Malmo are > 55.6 (well to the north)
+      expect(cph.latitude).toBeGreaterThan(berlin.latitude!);
+      expect(malmo.latitude).toBeGreaterThan(berlin.latitude!);
+      // Distance between Copenhagen and Malmo across the Øresund bridge is ~30 km
+      const distance = calculateDistanceKm(cph.latitude!, cph.longitude!, malmo.latitude!, malmo.longitude!);
+      expect(distance).toBeLessThan(45);
+      expect(distance).toBeGreaterThan(20);
     });
 
     it('resolves coordinates deterministically without Math.random()', () => {
