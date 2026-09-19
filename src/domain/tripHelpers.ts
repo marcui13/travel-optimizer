@@ -8,7 +8,7 @@ import {
   Accommodation,
   Location,
 } from './types';
-import { estimateTransportation } from '../services/geocoding/geocodingService';
+import { estimateTransportation, resolveLocationAsync } from '../services/geocoding/geocodingService';
 
 /**
  * Creates an array of date strings 'YYYY-MM-DD' from start to end inclusive.
@@ -491,6 +491,130 @@ export function resetTripToCleanState(trip: Trip, newStartDate?: string): Trip {
     transportation: transportationSegments,
     events: cleanedEvents,
     reservations: cleanedReservations,
+    itinerary: {
+      days: itineraryDays,
+    },
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export interface ResetTripCustomParams {
+  name?: string;
+  startDate?: string;
+  endDate?: string;
+  cityNames?: string[];
+  travelStyle?: 'relaxed' | 'balanced' | 'intense';
+  preferTrain?: boolean;
+}
+
+/**
+ * Resets a trip by editing any initial fields (name, dates, cities, style, transport)
+ * and cleanly rebuilding the itinerary and transportation.
+ */
+export async function resetTripWithCustomParams(
+  trip: Trip,
+  params: ResetTripCustomParams
+): Promise<Trip> {
+  const newName = params.name?.trim() || trip.name;
+  const newStartDate = params.startDate || trip.startDate;
+  const newEndDate = params.endDate || trip.endDate;
+  const preferTrain = params.preferTrain ?? (trip.preferences?.transportationPreference?.includes('train') ?? true);
+  const travelStyle = params.travelStyle ?? (trip.preferences?.travelStyle ?? 'balanced');
+
+  // Determine destinations
+  let newDestinations: Destination[] = [];
+  if (params.cityNames && params.cityNames.length > 0) {
+    const totalDays = Math.max(1, differenceInCalendarDays(parseISO(newEndDate), parseISO(newStartDate)));
+    const avgNights = Math.max(1, Math.floor(totalDays / params.cityNames.length));
+
+    newDestinations = await Promise.all(
+      params.cityNames.map(async (cityName, idx) => {
+        const trimmed = cityName.trim();
+        // Check if existing destination matches this name
+        const existing = trip.destinations.find(
+          (d) => d.name.toLowerCase() === trimmed.toLowerCase()
+        );
+        let loc: Location;
+        if (existing?.location && existing.location.latitude && existing.location.longitude) {
+          loc = existing.location;
+        } else {
+          loc = await resolveLocationAsync(trimmed);
+        }
+
+        const isFirst = idx === 0;
+        const isLast = idx === params.cityNames!.length - 1;
+        return {
+          id: existing ? existing.id : `dest-${Date.now()}-${idx + 1}`,
+          name: trimmed,
+          location: loc,
+          plannedNights: existing?.plannedNights ?? avgNights,
+          minimumNights: existing?.minimumNights ?? 1,
+          priority: isFirst || isLast ? ('high' as const) : (existing?.priority ?? ('medium' as const)),
+        };
+      })
+    );
+  } else {
+    newDestinations = trip.destinations;
+  }
+
+  // Rebuild itinerary days and transportation segments
+  const { itineraryDays, transportationSegments } = buildItineraryFromDestinations(
+    newDestinations,
+    newStartDate,
+    newEndDate,
+    undefined,
+    preferTrain
+  );
+
+  // Update origin if destinations exist
+  const newOrigin = newDestinations.length > 0 ? newDestinations[0].location : trip.origin;
+
+  // Clean events: keep user-fixed events that fall within the new date range
+  const cleanedEvents = trip.events.filter((e) => {
+    if (!e.fixed) return false;
+    const evDate = e.startDateTime.slice(0, 10);
+    return evDate >= newStartDate && evDate <= newEndDate;
+  });
+
+  // Clean reservations: keep confirmed user reservations that fall within the new date range
+  const cleanedReservations = trip.reservations.filter((r) => {
+    if (r.source !== 'user') return false;
+    if (!r.startDateTime) return false;
+    const resDate = r.startDateTime.slice(0, 10);
+    return resDate >= newStartDate && resDate <= newEndDate;
+  });
+
+  // Constraints: update end constraint if last city exists
+  const lastCity = newDestinations[newDestinations.length - 1];
+  const updatedConstraints = trip.constraints.map((c) => {
+    if (c.targetDestinationId && lastCity) {
+      return {
+        ...c,
+        targetDestinationId: lastCity.id,
+        targetDate: newEndDate,
+        description: `Finish trip in ${lastCity.name} by ${newEndDate}`,
+      };
+    }
+    return c;
+  });
+
+  return {
+    ...trip,
+    name: newName,
+    startDate: newStartDate,
+    endDate: newEndDate,
+    origin: newOrigin,
+    status: 'planned',
+    destinations: newDestinations,
+    transportation: transportationSegments,
+    events: cleanedEvents,
+    reservations: cleanedReservations,
+    constraints: updatedConstraints,
+    preferences: {
+      ...trip.preferences,
+      travelStyle,
+      transportationPreference: preferTrain ? ['train'] : ['flight'],
+    },
     itinerary: {
       days: itineraryDays,
     },

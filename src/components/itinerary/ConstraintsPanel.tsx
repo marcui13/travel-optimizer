@@ -179,7 +179,7 @@ export const ConstraintsPanel: React.FC<ConstraintsPanelProps> = ({
         </p>
 
         {/* Add Constraint Form */}
-        <form onSubmit={handleAddConstraint} className="flex gap-2">
+        <form onSubmit={handleAddConstraint} className="flex flex-col sm:flex-row gap-2">
           <select
             value={newType}
             onChange={(e) => setNewType(e.target.value as 'hard' | 'soft')}
@@ -199,7 +199,7 @@ export const ConstraintsPanel: React.FC<ConstraintsPanelProps> = ({
 
           <button
             type="submit"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors shrink-0"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>{t.constraints.add}</span>
@@ -218,12 +218,12 @@ export const ConstraintsPanel: React.FC<ConstraintsPanelProps> = ({
             hardConstraints.map((c) => (
               <div
                 key={c.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-amber-950/20 border border-amber-800/40 text-xs"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-lg bg-amber-950/20 border border-amber-800/40 text-xs"
               >
-                <div className="flex items-start gap-2.5">
+                <div className="flex items-start gap-2.5 min-w-0">
                   <span className="w-2 h-2 rounded-full bg-amber-400 mt-1 shrink-0" />
-                  <div>
-                    <p className="font-medium text-amber-200">{c.description}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium text-amber-200 break-words">{c.description}</p>
                     {c.targetDate && (
                       <span className="text-[11px] text-amber-400/80 font-mono">
                         {t.constraints.targetDate}: {c.targetDate}
@@ -232,7 +232,7 @@ export const ConstraintsPanel: React.FC<ConstraintsPanelProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end gap-2 shrink-0 self-end sm:self-auto">
                   <button
                     type="button"
                     onClick={() => handleToggleType(c.id)}
@@ -265,14 +265,14 @@ export const ConstraintsPanel: React.FC<ConstraintsPanelProps> = ({
             softConstraints.map((c) => (
               <div
                 key={c.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-slate-950/70 border border-slate-800 text-xs"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-lg bg-slate-950/70 border border-slate-800 text-xs"
               >
-                <div className="flex items-start gap-2.5">
+                <div className="flex items-start gap-2.5 min-w-0">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 mt-1 shrink-0" />
-                  <p className="text-slate-200">{c.description}</p>
+                  <p className="text-slate-200 break-words min-w-0">{c.description}</p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end gap-2 shrink-0 self-end sm:self-auto">
                   <button
                     type="button"
                     onClick={() => handleToggleType(c.id)}

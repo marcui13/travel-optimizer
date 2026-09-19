@@ -6,12 +6,14 @@ import {
 } from '../../domain/types';
 import { useI18n } from '../../i18n/I18nContext';
 import {
-  Sparkles,
   Send,
   Check,
   AlertTriangle,
   TrendingDown,
   Cpu,
+  SlidersHorizontal,
+  Loader2,
+  Route,
 } from 'lucide-react';
 import { executeWhatIfScenario, WhatIfResponse } from '../../services/ai/whatIfEngine';
 import {
@@ -111,28 +113,28 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
   const activeModel = getModelForProvider(activeProvider);
 
   return (
-    <div className="flex flex-col h-full bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+    <div className="flex flex-col h-full bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden">
       {/* Header */}
-      <div className="p-3.5 border-b border-slate-800/80 bg-slate-950/60 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-emerald-950 border border-emerald-700/60 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
+      <div className="p-3 sm:p-3.5 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shrink-0">
+            <SlidersHorizontal className="w-4 h-4 text-emerald-400" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-slate-100 text-xs tracking-wide">
+              <h3 className="font-semibold text-slate-100 text-xs tracking-wide truncate">
                 {t.assistant.intelligenceTitle}
               </h3>
-              <span className="text-[10px] text-emerald-400/80 font-medium italic hidden sm:inline">
+              <span className="text-[10px] text-slate-400 italic hidden sm:inline">
                 “Trust the Detour”
               </span>
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-[10px] text-emerald-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-[10px] text-emerald-400 flex items-center gap-1 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 {t.assistant.tripStateSynced}
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-400 font-mono truncate max-w-[130px]" title={isConfigured ? activeModel : 'Local'}>
+              <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono truncate max-w-[85px] sm:max-w-[130px] border border-slate-700" title={isConfigured ? activeModel : 'Local'}>
                 {isConfigured ? activeModel : 'Local Engine'}
               </span>
             </div>
@@ -140,18 +142,18 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
         </div>
 
         {/* Quick Optimization Shortcuts */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <button
             onClick={() => onRequestOptimization('efficient')}
             title="Optimize route"
-            className="text-[11px] px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+            className="text-[10px] sm:text-[11px] font-mono px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
           >
             {t.assistant.efficient}
           </button>
           <button
             onClick={() => onRequestOptimization('relaxed')}
             title="Relaxed pacing"
-            className="text-[11px] px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+            className="text-[10px] sm:text-[11px] font-mono px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
           >
             {t.assistant.relaxed}
           </button>
@@ -160,7 +162,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
 
       {/* Validation Banner if any critical issues */}
       {criticalIssues.length > 0 && (
-        <div className="p-2.5 bg-rose-950/80 border-b border-rose-900/60 text-xs text-rose-200 flex items-start gap-2">
+        <div className="p-2.5 bg-rose-950/70 border-b border-rose-900/60 text-xs text-rose-200 flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
           <div className="flex-1 text-[11px] leading-tight">
             <span className="font-bold">
@@ -173,7 +175,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
 
       {/* Actionable Optimization Proposal Banner (if pending) */}
       {optimizationResult && (
-        <div className="p-3 bg-emerald-950/40 border-b border-emerald-800/40 text-xs space-y-2">
+        <div className="p-3 bg-emerald-950/30 border-b border-emerald-800/40 text-xs space-y-2">
           <div className="flex items-center justify-between text-emerald-300 font-semibold">
             <span className="flex items-center gap-1.5">
               <TrendingDown className="w-3.5 h-3.5" />
@@ -191,7 +193,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
           <div className="flex items-center gap-2 pt-1">
             <button
               onClick={() => onApplyOptimization(optimizationResult)}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-1.5 px-3 rounded-lg text-xs flex items-center justify-center gap-1 transition-colors shadow"
+              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-1.5 px-3 rounded-lg text-xs flex items-center justify-center gap-1 transition-colors"
             >
               <Check className="w-3.5 h-3.5" />
               <span>{t.assistant.applyOptimization}</span>
@@ -210,21 +212,21 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
               className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
             >
               <div
-                className={`max-w-[90%] rounded-xl p-3 space-y-1.5 ${
+                className={`max-w-[90%] rounded-lg p-3 space-y-1.5 ${
                   isUser
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-950/80 border border-slate-800 text-slate-200'
+                    ? 'bg-slate-800 text-slate-100 border border-slate-700'
+                    : 'bg-slate-950/70 border border-slate-800 text-slate-200'
                 }`}
               >
                 {!isUser && m.whatIfProposal?.modelName && (
                   <div className="flex items-center gap-1 text-[9px] text-slate-400 mb-1">
                     {m.whatIfProposal.engineUsed === 'local' ? (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-950/70 border border-blue-800/40 text-blue-300 font-mono text-[9px]">
-                        <Cpu className="w-2.5 h-2.5" /> Motor Heurístico
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[9px]">
+                        <Cpu className="w-2.5 h-2.5 text-slate-400" /> Motor Heurístico
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-950/70 border border-amber-700/50 text-amber-300 font-mono text-[9px]">
-                        <Sparkles className="w-2.5 h-2.5 text-amber-400" /> {m.whatIfProposal.modelName}
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-emerald-300 font-mono text-[9px]">
+                        <Route className="w-2.5 h-2.5 text-emerald-400" /> {m.whatIfProposal.modelName}
                       </span>
                     )}
                   </div>
@@ -233,8 +235,8 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
 
                 {/* What-If Actionable Card */}
                 {m.whatIfProposal?.actionable && m.whatIfProposal.proposedTrip && (
-                  <div className="mt-2 pt-2 border-t border-slate-800 space-y-2">
-                    <div className="bg-slate-900/90 rounded-lg p-2.5 border border-emerald-700/50 text-[11px]">
+                  <div className="mt-2 pt-2 border-t border-slate-800/80 space-y-2">
+                    <div className="bg-slate-900/90 rounded-md p-2.5 border border-emerald-700/40 text-[11px]">
                       <span className="font-semibold text-emerald-400 block mb-1">
                         {t.assistant.impactSummary}
                       </span>
@@ -252,7 +254,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
                     <button
                       type="button"
                       onClick={() => onApplyWhatIfTrip(m.whatIfProposal!.proposedTrip!)}
-                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-1.5 px-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors"
+                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-1.5 px-2.5 rounded-md text-xs flex items-center justify-center gap-1.5 transition-colors"
                     >
                       <Check className="w-3.5 h-3.5" />
                       <span>{t.assistant.applyChanges}</span>
@@ -262,7 +264,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
 
                 <span
                   className={`text-[9px] block text-right font-mono ${
-                    isUser ? 'text-emerald-200' : 'text-slate-500'
+                    isUser ? 'text-slate-400' : 'text-slate-500'
                   }`}
                 >
                   {m.timestamp}
@@ -274,36 +276,36 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
 
         {isProcessing && (
           <div className="flex items-center gap-2 text-slate-400 text-xs italic py-2">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
+            <Loader2 className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
             <span>{t.assistant.evaluating}</span>
           </div>
         )}
       </div>
 
       {/* Quick Action Suggestion Chips */}
-      <div className="p-2.5 border-t border-slate-800/60 bg-slate-950/40">
+      <div className="p-2.5 border-t border-slate-800 bg-slate-950/60">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] scrollbar-none">
           <button
             onClick={() => handleSendMessage(t.assistant.chipFitCroatia)}
-            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+            className="shrink-0 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors font-mono text-[11px]"
           >
             {t.assistant.chipFitCroatia}
           </button>
           <button
             onClick={() => handleSendMessage(t.assistant.chipRelaxed)}
-            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+            className="shrink-0 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors font-mono text-[11px]"
           >
             {t.assistant.chipRelaxed}
           </button>
           <button
             onClick={() => handleSendMessage(t.assistant.chipTrainsOnly)}
-            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+            className="shrink-0 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors font-mono text-[11px]"
           >
             {t.assistant.chipTrainsOnly}
           </button>
           <button
             onClick={() => handleSendMessage(t.assistant.chipMoreItaly)}
-            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+            className="shrink-0 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors font-mono text-[11px]"
           >
             {t.assistant.chipMoreItaly}
           </button>
@@ -322,12 +324,12 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
             placeholder={t.assistant.inputPlaceholder}
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
-            className="flex-1 bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500 placeholder:text-slate-600"
+            className="flex-1 bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg px-3 py-2 min-h-[38px] focus:outline-none focus:border-emerald-500 placeholder:text-slate-600"
           />
           <button
             type="submit"
             disabled={!inputQuery.trim() || isProcessing}
-            className="p-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white transition-colors"
+            className="h-[38px] w-[38px] flex items-center justify-center rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white transition-colors shrink-0"
           >
             <Send className="w-3.5 h-3.5" />
           </button>

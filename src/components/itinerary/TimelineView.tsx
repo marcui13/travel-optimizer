@@ -12,7 +12,6 @@ import {
   Car,
   Bus,
   Clock,
-  Sparkles,
   CheckCircle2,
   AlertCircle,
   Building,
@@ -75,7 +74,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   }
 
   return (
-    <div className="space-y-4 pb-12">
+    <div className="relative pl-4 sm:pl-7 space-y-3 sm:space-y-4 pb-12 before:absolute before:top-4 before:bottom-6 before:left-[7px] sm:before:left-[13px] before:w-0.5 before:bg-slate-800">
       {trip.itinerary.days.map((day) => {
         const isSelectedDay = day.date === selectedDayDate;
         const isSelectedDest = day.destinationId === selectedDestinationId;
@@ -112,72 +111,88 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             }}
             className={`group relative rounded-xl transition-all duration-200 border cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
               isSelectedDay
-                ? 'bg-slate-900 border-emerald-500/80 ring-2 ring-emerald-500/20 shadow-xl'
+                ? 'bg-slate-900 border-emerald-500/80 ring-2 ring-emerald-500/20 shadow-lg'
                 : isSelectedDest
-                ? 'bg-slate-900/90 border-emerald-500/40 shadow-md'
+                ? 'bg-slate-900/90 border-emerald-500/40 shadow-sm'
                 : 'bg-slate-900/60 hover:bg-slate-900/90 border-slate-800/80 hover:border-slate-700'
             }`}
           >
+            {/* Route Spine Node on the left line */}
+            <div
+              aria-hidden="true"
+              className={`absolute -left-[14px] sm:-left-[21px] top-3.5 sm:top-4 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2 z-10 transition-colors ${
+                isSelectedDay
+                  ? 'bg-emerald-400 border-emerald-300 ring-4 ring-emerald-500/20'
+                  : isSelectedDest
+                  ? 'bg-emerald-500/80 border-emerald-400'
+                  : day.isTravelDay
+                  ? 'bg-slate-900 border-emerald-500'
+                  : 'bg-slate-900 border-slate-600 group-hover:border-slate-400'
+              }`}
+            />
+
             {/* Day Header Bar */}
-            <div className="p-4 pb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60">
-              <div className="flex items-center gap-3">
+            <div className="p-3 sm:p-4 pb-2.5 sm:pb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                 <div
-                  className={`w-9 h-9 rounded-lg flex flex-col items-center justify-center font-mono font-bold text-xs shadow-inner ${
+                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-md flex flex-col items-center justify-center font-mono font-bold text-xs border shrink-0 ${
                     day.isTravelDay
-                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                      : 'bg-slate-800 text-slate-200 border border-slate-700'
+                      ? 'bg-slate-800 text-emerald-400 border-emerald-700/60'
+                      : 'bg-slate-800/70 text-slate-200 border-slate-700/60'
                   }`}
                 >
-                  <span className="text-[10px] text-slate-400 -mb-1">{t.timeline.day}</span>
-                  <span>{day.dayNumber}</span>
+                  <span className="text-[8px] sm:text-[9px] text-slate-400 uppercase tracking-wider leading-none mb-0.5">{t.timeline.day}</span>
+                  <span className="text-xs sm:text-sm leading-none">{day.dayNumber}</span>
                 </div>
 
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-slate-100 text-sm capitalize">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <h3 className="font-semibold text-slate-100 text-xs sm:text-sm capitalize truncate">
                       {formattedDate}
                     </h3>
-                    <span className="text-xs text-slate-400 capitalize">• {dayOfWeek}</span>
+                    <span className="text-[11px] sm:text-xs text-slate-400 capitalize shrink-0">• {dayOfWeek}</span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 text-xs text-slate-300 mt-0.5">
-                    <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                  <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-300 mt-0.5 truncate">
+                    <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         if (day.destinationId) onSelectDestination?.(day.destinationId);
                       }}
-                      className="font-medium hover:text-emerald-300 hover:underline"
+                      className="font-medium hover:text-emerald-300 hover:underline truncate"
                     >
                       {day.location?.name || t.timeline.inTransit}
                     </button>
                     {day.location?.country && (
-                      <span className="text-slate-500">, {day.location.country}</span>
+                      <span className="text-slate-500 shrink-0">, {day.location.country}</span>
                     )}
                   </div>
                 </div>
               </div>
 
               {/* Day Badges */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                 {day.isTravelDay && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-950/80 text-blue-300 border border-blue-800/60">
+                  <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-mono font-medium bg-slate-800 text-sky-300 border border-slate-700">
                     <Train className="w-3 h-3" />
-                    {t.timeline.travelDay}
+                    <span className="hidden xs:inline">{t.timeline.travelDay}</span>
+                    <span className="xs:hidden">Viaje</span>
                   </span>
                 )}
                 {dayEvents.some((e) => e.fixed) && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-950/80 text-amber-300 border border-amber-800/60">
+                  <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-mono font-medium bg-slate-800 text-amber-300 border border-slate-700">
                     <Ticket className="w-3 h-3" />
-                    {t.timeline.fixedCommitment}
+                    <span className="hidden xs:inline">{t.timeline.fixedCommitment}</span>
+                    <span className="xs:hidden">Fijo</span>
                   </span>
                 )}
               </div>
             </div>
 
             {/* Day Body Content */}
-            <div className="p-4 space-y-3">
+            <div className="p-3 sm:p-4 space-y-2.5 sm:space-y-3">
               {/* 1. Transportation Segment */}
               {day.transportation && day.transportation.length > 0 && (
                 <div className="space-y-2">
@@ -194,19 +209,19 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
               {/* 2. Accommodation Notice on arrival day */}
               {day.accommodation && day.isTravelDay && (
-                <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 text-xs">
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/50 border border-slate-800/80 text-xs">
                   <div className="flex items-center gap-2">
                     <Building className="w-4 h-4 text-emerald-400 shrink-0" />
                     <div>
                       <span className="font-medium text-slate-200">
                         {t.timeline.checkIn}: {day.accommodation.name}
                       </span>
-                      <span className="text-slate-500 ml-2">
+                      <span className="text-slate-400 font-mono text-[11px] ml-2">
                         ({day.accommodation.nightsCount} {t.common.nights.toLowerCase()})
                       </span>
                     </div>
                   </div>
-                  <span className="text-[11px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-mono text-emerald-400 bg-slate-800/80 border border-slate-700 px-2 py-0.5 rounded uppercase tracking-wider">
                     {t.timeline.baseCamp}
                   </span>
                 </div>
@@ -218,23 +233,23 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                   {dayEvents.map((evt) => (
                     <div
                       key={evt.id}
-                      className="flex items-start justify-between p-2 rounded-lg bg-amber-950/20 border border-amber-800/40 text-xs"
+                      className="flex items-start justify-between p-2.5 rounded-lg bg-amber-950/15 border border-amber-800/30 text-xs"
                     >
                       <div className="flex items-start gap-2">
                         <Ticket className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
                         <div>
-                          <p className="font-semibold text-amber-200">{evt.title}</p>
-                          {evt.notes && <p className="text-slate-400 text-[11px]">{evt.notes}</p>}
+                          <p className="font-medium text-amber-200">{evt.title}</p>
+                          {evt.notes && <p className="text-slate-400 text-[11px] mt-0.5">{evt.notes}</p>}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
                         {evt.startDateTime.includes('T') && (
-                          <span className="font-mono text-slate-300">
+                          <span className="font-mono text-slate-400 text-[11px]">
                             {evt.startDateTime.split('T')[1].slice(0, 5)}
                           </span>
                         )}
-                        <span className="px-1.5 py-0.2 rounded text-[10px] bg-amber-900/60 text-amber-300 border border-amber-700/60">
-                          {evt.fixed ? 'Hard' : 'Event'}
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-900/30 text-amber-300 border border-amber-700/40">
+                          {evt.fixed ? 'Fijo' : 'Evento'}
                         </span>
                       </div>
                     </div>
@@ -264,7 +279,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                 <div className="space-y-1.5 pt-1">
                   <div className="flex items-center justify-between text-[11px] text-slate-400 pb-1">
                     <span>{t.timeline.suggestedFlow}</span>
-                    <span>
+                    <span className="font-mono">
                       {day.activities.length} {t.timeline.plannedActivities}
                     </span>
                   </div>
@@ -307,44 +322,52 @@ const TransitSegmentCard: React.FC<TransitSegmentCardProps> = ({
         e.stopPropagation();
         onSelect?.();
       }}
-      className={`p-3 rounded-lg border transition-all cursor-pointer ${
+      className={`p-2.5 sm:p-3 rounded-lg border transition-all cursor-pointer ${
         isSelected
-          ? 'bg-emerald-950/50 border-emerald-500 ring-1 ring-emerald-500/40'
-          : 'bg-slate-950/80 hover:bg-slate-950 border-slate-800 hover:border-slate-700'
+          ? 'bg-emerald-950/40 border-emerald-500/70 ring-1 ring-emerald-500/30 text-emerald-200'
+          : 'bg-slate-950/60 hover:bg-slate-950 border-slate-800/80 hover:border-slate-700 text-slate-200'
       }`}
     >
-      <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2 font-medium text-slate-200">
-          {isFlight ? (
-            <Plane className="w-4 h-4 text-blue-400 shrink-0" />
-          ) : isTrain ? (
-            <Train className="w-4 h-4 text-emerald-400 shrink-0" />
-          ) : segment.mode === 'bus' ? (
-            <Bus className="w-4 h-4 text-amber-400 shrink-0" />
-          ) : (
-            <Car className="w-4 h-4 text-purple-400 shrink-0" />
-          )}
-          <span>
-            {segment.from.name} → {segment.to.name}
+      <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 text-xs">
+        <div className="flex items-center gap-1.5 sm:gap-2 font-medium tracking-tight min-w-0">
+          <span className="p-1 rounded bg-slate-800 text-slate-300 border border-slate-700/60 shrink-0">
+            {isFlight ? (
+              <Plane className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+            ) : isTrain ? (
+              <Train className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            ) : segment.mode === 'bus' ? (
+              <Bus className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            ) : (
+              <Car className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+            )}
           </span>
+          <span className="font-semibold text-slate-100 truncate">{segment.from.name}</span>
+          <span className="text-slate-500 shrink-0">→</span>
+          <span className="font-semibold text-slate-100 truncate">{segment.to.name}</span>
         </div>
 
-        <div className="flex items-center gap-3 text-slate-400 text-[11px]">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 sm:gap-3 text-slate-400 text-[10px] sm:text-[11px] font-mono shrink-0 ml-auto">
+          <div className="flex items-center gap-1 text-slate-300">
             <Clock className="w-3 h-3 text-slate-500" />
             <span>
               {Math.floor((segment.estimatedDurationMinutes || 0) / 60)}h{' '}
               {(segment.estimatedDurationMinutes || 0) % 60}m
             </span>
           </div>
-          <span className="font-mono text-slate-500">{segment.distanceKm} km</span>
+          <span className="text-slate-500">•</span>
+          <span>{segment.distanceKm} km</span>
         </div>
       </div>
 
       {segment.operatorOrRoute && (
-        <p className="mt-1.5 text-[11px] text-slate-400 pl-6 leading-relaxed">
-          {segment.operatorOrRoute}
-        </p>
+        <div className="mt-1.5 pt-1.5 border-t border-slate-800/50 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400">
+          <span className="text-slate-400 font-mono text-[9px] sm:text-[10px] uppercase tracking-wider">{segment.operatorOrRoute}</span>
+          {segment.departureTime && (
+            <span className="font-mono text-slate-500">
+              {segment.departureTime} {segment.arrivalTime ? `→ ${segment.arrivalTime}` : ''}
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
@@ -355,14 +378,14 @@ const ActivityRow: React.FC<{ activity: Activity; optionalLabel: string }> = ({
   optionalLabel,
 }) => {
   return (
-    <div className="flex items-start justify-between p-2 rounded-md hover:bg-slate-800/40 text-xs transition-colors">
+    <div className="flex items-start justify-between p-2 rounded-md hover:bg-slate-800/30 text-xs transition-colors border border-transparent hover:border-slate-800">
       <div className="flex items-start gap-2.5">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+        <span className="w-1.5 h-1.5 rounded-full bg-slate-500 mt-1.5 shrink-0" />
         <div>
           <div className="flex items-center gap-2">
             <span className="font-medium text-slate-200">{activity.title}</span>
             {activity.isOptional && (
-              <span className="text-[10px] text-slate-500 italic">{optionalLabel}</span>
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wide">({optionalLabel})</span>
             )}
           </div>
           {activity.description && (
@@ -392,7 +415,7 @@ const ConfidenceBadge: React.FC<{ confidence?: ConfidenceLevel }> = ({
     return (
       <span
         title={t.common.verified}
-        className="px-1.5 py-0.2 rounded text-[10px] bg-emerald-950/60 text-emerald-400 border border-emerald-800/40"
+        className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800/80 text-emerald-400 border border-slate-700"
       >
         {t.common.verified}
       </span>
@@ -402,7 +425,7 @@ const ConfidenceBadge: React.FC<{ confidence?: ConfidenceLevel }> = ({
     return (
       <span
         title={t.common.verify}
-        className="px-1.5 py-0.2 rounded text-[10px] bg-amber-950/60 text-amber-400 border border-amber-800/40 flex items-center gap-0.5"
+        className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-950/40 text-amber-300 border border-amber-800/50 flex items-center gap-1"
       >
         <AlertCircle className="w-2.5 h-2.5" />
         {t.common.verify}
@@ -412,9 +435,9 @@ const ConfidenceBadge: React.FC<{ confidence?: ConfidenceLevel }> = ({
   return (
     <span
       title={t.common.aiSuggestion}
-      className="px-1.5 py-0.2 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700/60 flex items-center gap-0.5"
+      className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800/60 text-slate-400 border border-slate-700/50 flex items-center gap-1"
     >
-      <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
       {t.common.aiSuggestion}
     </span>
   );

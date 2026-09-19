@@ -263,6 +263,19 @@ export interface Translations {
     resetModal: {
       title: string;
       subtitle: string;
+      modeEditParamsTitle: string;
+      modeEditParamsDesc: string;
+      editTripNameLabel: string;
+      editStartDateLabel: string;
+      editEndDateLabel: string;
+      editCitiesLabel: string;
+      addCityPlaceholder: string;
+      addCityButton: string;
+      editPaceLabel: string;
+      editTransportLabel: string;
+      preferRail: string;
+      preferFlight: string;
+      rebuildingTrip: string;
       modeShiftTitle: string;
       modeShiftDesc: string;
       newStartDateLabel: string;

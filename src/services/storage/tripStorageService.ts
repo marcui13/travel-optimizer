@@ -155,20 +155,27 @@ export class TripStorageService {
 
   /**
    * Resets a trip in history:
+   * - 'editParams': replaces with custom trip rebuilt from edited initial fields
    * - 'shift': shifts all dates to a new start date while preserving route & stays
    * - 'baseline': rebuilds clean days and clears ad-hoc changes
    * - 'markPlanned': simply sets status back to 'planned'
    */
   public resetTripInHistory(
     tripId: string,
-    options: { mode: 'shift' | 'baseline' | 'markPlanned'; newStartDate?: string }
+    options: {
+      mode: 'shift' | 'baseline' | 'markPlanned' | 'editParams';
+      newStartDate?: string;
+      customTrip?: Trip;
+    }
   ): { trips: Trip[]; updatedTrip: Trip | null } {
     const history = this.loadTripHistory();
     const trip = history.find((t) => t.id === tripId);
     if (!trip) return { trips: history, newTrip: null, updatedTrip: null } as any;
 
     let resetTrip: Trip;
-    if (options.mode === 'shift' && options.newStartDate) {
+    if (options.mode === 'editParams' && options.customTrip) {
+      resetTrip = options.customTrip;
+    } else if (options.mode === 'shift' && options.newStartDate) {
       resetTrip = shiftTripDates(trip, options.newStartDate);
     } else if (options.mode === 'baseline') {
       resetTrip = resetTripToCleanState(trip, options.newStartDate);

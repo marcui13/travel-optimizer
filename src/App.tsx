@@ -41,7 +41,7 @@ import {
   Calendar as CalendarIcon,
   ShieldAlert,
   Map as MapIcon,
-  Sparkles,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 const initialSharedTrip: Trip | null = (() => {
@@ -138,6 +138,7 @@ const AppInner: React.FC = () => {
   const [activeView, setActiveView] = useState<'split' | 'map' | 'timeline' | 'calendar'>('split');
   const [itineraryTab, setItineraryTab] = useState<'timeline' | 'calendar' | 'constraints'>('timeline');
   const [mobileSplitTab, setMobileSplitTab] = useState<'itinerary' | 'map' | 'assistant'>('itinerary');
+  const [companionTab, setCompanionTab] = useState<'map' | 'assistant'>('map');
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -415,7 +416,11 @@ const AppInner: React.FC = () => {
 
   const handleConfirmReset = (
     tripId: string,
-    options: { mode: 'shift' | 'baseline' | 'markPlanned'; newStartDate?: string }
+    options: {
+      mode: 'shift' | 'baseline' | 'markPlanned' | 'editParams';
+      newStartDate?: string;
+      customTrip?: Trip;
+    }
   ) => {
     const { trips, updatedTrip } = tripStorage.resetTripInHistory(tripId, options);
     setSavedTrips(trips);
@@ -500,15 +505,20 @@ const AppInner: React.FC = () => {
       <StatsBar
         trip={currentTrip}
         validationIssues={validationIssues}
-        onOpenOptimization={() => handleRequestOptimization('efficient')}
+        onOpenOptimization={() => {
+          setActiveView('split');
+          setCompanionTab('assistant');
+          setMobileSplitTab('assistant');
+          handleRequestOptimization('efficient');
+        }}
         onOpenValidationDetails={() => setIsValidationOpen(true)}
       />
 
       {/* 3. Main Workspace Area */}
-      <main className="flex-1 p-3 sm:p-4 max-w-[1680px] w-full mx-auto flex flex-col gap-4">
+      <main className="flex-1 p-2 sm:p-4 max-w-[1680px] w-full mx-auto flex flex-col gap-2.5 sm:gap-4">
         {/* Full Map View */}
         {activeView === 'map' && (
-          <div className="w-full h-[calc(100vh-170px)] min-h-[620px] rounded-xl overflow-hidden shadow-2xl flex flex-col">
+          <div className="w-full h-[calc(100vh-170px)] min-h-[520px] rounded-xl overflow-hidden shadow-xl flex flex-col">
             <InteractiveMap
               destinations={currentTrip.destinations}
               transportation={currentTrip.transportation}
@@ -526,7 +536,7 @@ const AppInner: React.FC = () => {
 
         {/* Full Timeline View */}
         {activeView === 'timeline' && (
-          <div className="max-w-4xl mx-auto w-full py-2">
+          <div className="max-w-4xl mx-auto w-full py-1 sm:py-2">
             <TimelineView
               trip={currentTrip}
               selectedDestinationId={selectedDestinationId}
@@ -541,7 +551,7 @@ const AppInner: React.FC = () => {
 
         {/* Full Calendar View */}
         {activeView === 'calendar' && (
-          <div className="max-w-5xl mx-auto w-full py-2">
+          <div className="max-w-5xl mx-auto w-full py-1 sm:py-2">
             <CalendarView
               trip={currentTrip}
               selectedDayDate={selectedDayDate}
@@ -550,14 +560,14 @@ const AppInner: React.FC = () => {
           </div>
         )}
 
-        {/* Split Planner View (Desktop Core Layout & Mobile Segmented Controls) */}
+        {/* Split Planner View (Desktop Core Side-by-Side Layout & Mobile Segmented Controls) */}
         {activeView === 'split' && (
-          <div className="flex flex-col gap-4">
-            {/* Mobile View Toggle Bar (Only visible on screens < 1024px) */}
+          <div className="flex flex-col gap-2.5 sm:gap-4">
+            {/* Mobile View Segmented Controls (Only visible on screens < 1024px) */}
             <div
               role="tablist"
               aria-label="Mobile workspace view"
-              className="grid grid-cols-3 lg:hidden bg-slate-900 border border-slate-800 rounded-xl p-1 gap-1 text-xs font-semibold"
+              className="grid grid-cols-3 lg:hidden bg-slate-900/95 border border-slate-800 rounded-lg p-1 gap-1 text-xs font-medium sticky top-[48px] sm:top-[53px] z-20 shadow-md backdrop-blur-md"
             >
               <button
                 role="tab"
@@ -565,9 +575,9 @@ const AppInner: React.FC = () => {
                 aria-selected={mobileSplitTab === 'itinerary'}
                 aria-controls="mobile-panel-itinerary"
                 onClick={() => setMobileSplitTab('itinerary')}
-                className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                className={`py-2 px-1 rounded flex items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                   mobileSplitTab === 'itinerary'
-                    ? 'bg-emerald-600 text-white shadow-sm'
+                    ? 'bg-slate-800 text-emerald-400 font-semibold border border-slate-700 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -579,11 +589,14 @@ const AppInner: React.FC = () => {
                 role="tab"
                 id="mobile-tab-map"
                 aria-selected={mobileSplitTab === 'map'}
-                aria-controls="mobile-panel-map"
-                onClick={() => setMobileSplitTab('map')}
-                className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                aria-controls="mobile-panel-companion"
+                onClick={() => {
+                  setMobileSplitTab('map');
+                  setCompanionTab('map');
+                }}
+                className={`py-2 px-1 rounded flex items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                   mobileSplitTab === 'map'
-                    ? 'bg-emerald-600 text-white shadow-sm'
+                    ? 'bg-slate-800 text-emerald-400 font-semibold border border-slate-700 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -595,180 +608,215 @@ const AppInner: React.FC = () => {
                 role="tab"
                 id="mobile-tab-assistant"
                 aria-selected={mobileSplitTab === 'assistant'}
-                aria-controls="mobile-panel-assistant"
-                onClick={() => setMobileSplitTab('assistant')}
-                className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                aria-controls="mobile-panel-companion"
+                onClick={() => {
+                  setMobileSplitTab('assistant');
+                  setCompanionTab('assistant');
+                }}
+                className={`py-2 px-1 rounded flex items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                   mobileSplitTab === 'assistant'
-                    ? 'bg-emerald-600 text-white shadow-sm'
+                    ? 'bg-slate-800 text-emerald-400 font-semibold border border-slate-700 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5 shrink-0 text-emerald-300" />
+                <SlidersHorizontal className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
                 <span className="truncate">{t.header.assistant}</span>
               </button>
             </div>
 
-            {/* Upper Split: Map on Left, Contextual AI Assistant on Right */}
-            <div
-              className={`grid grid-cols-1 lg:grid-cols-12 gap-4 ${
-                mobileSplitTab === 'itinerary' ? 'hidden lg:grid' : 'grid'
-              }`}
-            >
-              {/* Map Panel */}
+            {/* Desktop Side-by-Side Grid (Itinerary Planner on Left, Companion Map/Assistant on Right) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 lg:items-start">
+              {/* Left Column: Itinerary Workspace (58% desktop width) */}
               <div
-                id="mobile-panel-map"
-                className={`lg:col-span-7 xl:col-span-8 min-h-[420px] lg:min-h-[500px] h-[65vh] lg:h-auto rounded-xl overflow-hidden shadow-xl border border-slate-800 ${
-                  mobileSplitTab === 'map' ? 'block' : 'hidden lg:block'
+                id="mobile-panel-itinerary"
+                className={`lg:col-span-7 xl:col-span-7 bg-transparent sm:bg-slate-900/40 border-0 sm:border sm:border-slate-800 rounded-none sm:rounded-xl p-0 sm:p-5 ${
+                  mobileSplitTab === 'itinerary' ? 'block' : 'hidden lg:block'
                 }`}
               >
-                <InteractiveMap
-                  destinations={currentTrip.destinations}
-                  transportation={currentTrip.transportation}
-                  selectedDestinationId={selectedDestinationId}
-                  selectedSegmentId={selectedSegmentId}
-                  selectedDayDate={selectedDayDate}
-                  optimizationResult={optimizationResult}
-                  showOptimizationDiff={showOptimizationDiff}
-                  onSelectDestination={handleSelectDestination}
-                  onSelectSegment={handleSelectSegment}
-                  onClearSelection={handleClearSelection}
-                />
+                {/* Workspace Sub-Navigation Tabs */}
+                <div
+                  role="tablist"
+                  aria-label="Itinerary sections"
+                  className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-slate-800 mb-3 sm:mb-4 px-1 sm:px-0"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      role="tab"
+                      id="tab-timeline"
+                      aria-selected={itineraryTab === 'timeline'}
+                      aria-controls="tabpanel-timeline"
+                      onClick={() => setItineraryTab('timeline')}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                        itineraryTab === 'timeline'
+                          ? 'bg-slate-800 text-emerald-400 border border-slate-700 shadow-xs'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <ListOrdered className="w-3.5 h-3.5" />
+                      <span>{t.header.timeline}</span>
+                    </button>
+
+                    <button
+                      role="tab"
+                      id="tab-calendar"
+                      aria-selected={itineraryTab === 'calendar'}
+                      aria-controls="tabpanel-calendar"
+                      onClick={() => setItineraryTab('calendar')}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                        itineraryTab === 'calendar'
+                          ? 'bg-slate-800 text-emerald-400 border border-slate-700 shadow-xs'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <CalendarIcon className="w-3.5 h-3.5" />
+                      <span>{t.header.calendar}</span>
+                    </button>
+
+                    <button
+                      role="tab"
+                      id="tab-constraints"
+                      aria-selected={itineraryTab === 'constraints'}
+                      aria-controls="tabpanel-constraints"
+                      onClick={() => setItineraryTab('constraints')}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                        itineraryTab === 'constraints'
+                          ? 'bg-slate-800 text-emerald-400 border border-slate-700 shadow-xs'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5" />
+                      <span>{t.constraints.travelPreferences}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Active Tab Content */}
+                {itineraryTab === 'timeline' && (
+                  <div
+                    role="tabpanel"
+                    id="tabpanel-timeline"
+                    aria-labelledby="tab-timeline"
+                    tabIndex={0}
+                    className="focus-visible:outline-none"
+                  >
+                    <TimelineView
+                      trip={currentTrip}
+                      selectedDestinationId={selectedDestinationId}
+                      selectedSegmentId={selectedSegmentId}
+                      selectedDayDate={selectedDayDate}
+                      onSelectDay={handleSelectDay}
+                      onSelectDestination={handleSelectDestination}
+                      onSelectSegment={handleSelectSegment}
+                    />
+                  </div>
+                )}
+
+                {itineraryTab === 'calendar' && (
+                  <div
+                    role="tabpanel"
+                    id="tabpanel-calendar"
+                    aria-labelledby="tab-calendar"
+                    tabIndex={0}
+                    className="focus-visible:outline-none"
+                  >
+                    <CalendarView
+                      trip={currentTrip}
+                      selectedDayDate={selectedDayDate}
+                      onSelectDay={handleSelectDay}
+                    />
+                  </div>
+                )}
+
+                {itineraryTab === 'constraints' && (
+                  <div
+                    role="tabpanel"
+                    id="tabpanel-constraints"
+                    aria-labelledby="tab-constraints"
+                    tabIndex={0}
+                    className="focus-visible:outline-none"
+                  >
+                    <ConstraintsPanel
+                      trip={currentTrip}
+                      onUpdateConstraints={handleUpdateConstraints}
+                      onUpdatePreferences={handleUpdatePreferences}
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Contextual AI Assistant Panel */}
+              {/* Right Column: Sticky Companion Container (Map or Assistant) */}
               <div
-                id="mobile-panel-assistant"
-                className={`lg:col-span-5 xl:col-span-4 min-h-[460px] h-[72vh] lg:h-auto max-h-[700px] flex-col ${
-                  mobileSplitTab === 'assistant' ? 'flex' : 'hidden lg:flex'
+                id="mobile-panel-companion"
+                className={`lg:col-span-5 xl:col-span-5 lg:sticky lg:top-24 flex flex-col gap-2.5 h-[calc(100dvh-175px)] min-h-[380px] lg:h-[calc(100vh-140px)] lg:min-h-[540px] lg:max-h-[850px] ${
+                  mobileSplitTab === 'itinerary' ? 'hidden lg:flex' : 'flex'
                 }`}
               >
-                <AssistantPanel
-                  trip={currentTrip}
-                  validationIssues={validationIssues}
-                  optimizationResult={optimizationResult}
-                  onApplyOptimization={handleApplyOptimization}
-                  onApplyWhatIfTrip={updateTrip}
-                  onRequestOptimization={handleRequestOptimization}
-                />
-              </div>
-            </div>
+                {/* Companion Tab Switcher (Desktop visible) */}
+                <div
+                  role="tablist"
+                  aria-label="Companion view toggle"
+                  className="hidden lg:flex items-center justify-between bg-slate-900 border border-slate-800 rounded-lg p-1 text-xs"
+                >
+                  <div className="flex items-center gap-1 w-full">
+                    <button
+                      role="tab"
+                      id="desktop-companion-map"
+                      aria-selected={companionTab === 'map'}
+                      onClick={() => setCompanionTab('map')}
+                      className={`flex-1 py-1.5 px-3 rounded text-xs font-medium flex items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                        companionTab === 'map'
+                          ? 'bg-slate-800 text-slate-100 font-semibold border border-slate-700 shadow-xs'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <MapIcon className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{t.header.mapFocus}</span>
+                    </button>
 
-            {/* Lower Workspace: Itinerary Timeline / Calendar / Constraints Tabs */}
-            <div
-              id="mobile-panel-itinerary"
-              className={`bg-slate-900/40 border border-slate-800 rounded-xl p-4 shadow-xl ${
-                mobileSplitTab === 'itinerary' ? 'block' : 'hidden lg:block'
-              }`}
-            >
-              {/* Workspace Navigation Tabs */}
-              <div
-                role="tablist"
-                aria-label="Itinerary sections"
-                className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4"
-              >
-                <div className="flex items-center gap-2">
-                  <button
-                    role="tab"
-                    id="tab-timeline"
-                    aria-selected={itineraryTab === 'timeline'}
-                    aria-controls="tabpanel-timeline"
-                    onClick={() => setItineraryTab('timeline')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                      itineraryTab === 'timeline'
-                        ? 'bg-emerald-600 text-white shadow'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                    }`}
-                  >
-                    <ListOrdered className="w-3.5 h-3.5" />
-                    <span>{t.header.timeline}</span>
-                  </button>
+                    <button
+                      role="tab"
+                      id="desktop-companion-assistant"
+                      aria-selected={companionTab === 'assistant'}
+                      onClick={() => setCompanionTab('assistant')}
+                      className={`flex-1 py-1.5 px-3 rounded text-xs font-medium flex items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                        companionTab === 'assistant'
+                          ? 'bg-slate-800 text-slate-100 font-semibold border border-slate-700 shadow-xs'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{t.header.assistant}</span>
+                    </button>
+                  </div>
+                </div>
 
-                  <button
-                    role="tab"
-                    id="tab-calendar"
-                    aria-selected={itineraryTab === 'calendar'}
-                    aria-controls="tabpanel-calendar"
-                    onClick={() => setItineraryTab('calendar')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                      itineraryTab === 'calendar'
-                        ? 'bg-emerald-600 text-white shadow'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                    }`}
-                  >
-                    <CalendarIcon className="w-3.5 h-3.5" />
-                    <span>{t.header.calendar}</span>
-                  </button>
-
-                  <button
-                    role="tab"
-                    id="tab-constraints"
-                    aria-selected={itineraryTab === 'constraints'}
-                    aria-controls="tabpanel-constraints"
-                    onClick={() => setItineraryTab('constraints')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                      itineraryTab === 'constraints'
-                        ? 'bg-emerald-600 text-white shadow'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                    }`}
-                  >
-                    <ShieldAlert className="w-3.5 h-3.5" />
-                    <span>{t.constraints.travelPreferences}</span>
-                  </button>
+                {/* Active Companion Content */}
+                <div className="flex-1 rounded-xl overflow-hidden border border-slate-800 bg-slate-950 flex flex-col">
+                  {companionTab === 'map' ? (
+                    <InteractiveMap
+                      destinations={currentTrip.destinations}
+                      transportation={currentTrip.transportation}
+                      selectedDestinationId={selectedDestinationId}
+                      selectedSegmentId={selectedSegmentId}
+                      selectedDayDate={selectedDayDate}
+                      optimizationResult={optimizationResult}
+                      showOptimizationDiff={showOptimizationDiff}
+                      onSelectDestination={handleSelectDestination}
+                      onSelectSegment={handleSelectSegment}
+                      onClearSelection={handleClearSelection}
+                    />
+                  ) : (
+                    <AssistantPanel
+                      trip={currentTrip}
+                      validationIssues={validationIssues}
+                      optimizationResult={optimizationResult}
+                      onApplyOptimization={handleApplyOptimization}
+                      onApplyWhatIfTrip={updateTrip}
+                      onRequestOptimization={handleRequestOptimization}
+                    />
+                  )}
                 </div>
               </div>
-
-              {/* Active Tab Content */}
-              {itineraryTab === 'timeline' && (
-                <div
-                  role="tabpanel"
-                  id="tabpanel-timeline"
-                  aria-labelledby="tab-timeline"
-                  tabIndex={0}
-                  className="max-w-4xl focus-visible:outline-none"
-                >
-                  <TimelineView
-                    trip={currentTrip}
-                    selectedDestinationId={selectedDestinationId}
-                    selectedSegmentId={selectedSegmentId}
-                    selectedDayDate={selectedDayDate}
-                    onSelectDay={handleSelectDay}
-                    onSelectDestination={handleSelectDestination}
-                    onSelectSegment={handleSelectSegment}
-                  />
-                </div>
-              )}
-
-              {itineraryTab === 'calendar' && (
-                <div
-                  role="tabpanel"
-                  id="tabpanel-calendar"
-                  aria-labelledby="tab-calendar"
-                  tabIndex={0}
-                  className="focus-visible:outline-none"
-                >
-                  <CalendarView
-                    trip={currentTrip}
-                    selectedDayDate={selectedDayDate}
-                    onSelectDay={handleSelectDay}
-                  />
-                </div>
-              )}
-
-              {itineraryTab === 'constraints' && (
-                <div
-                  role="tabpanel"
-                  id="tabpanel-constraints"
-                  aria-labelledby="tab-constraints"
-                  tabIndex={0}
-                  className="max-w-3xl focus-visible:outline-none"
-                >
-                  <ConstraintsPanel
-                    trip={currentTrip}
-                    onUpdateConstraints={handleUpdateConstraints}
-                    onUpdatePreferences={handleUpdatePreferences}
-                  />
-                </div>
-              )}
             </div>
           </div>
         )}

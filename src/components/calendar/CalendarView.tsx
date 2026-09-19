@@ -41,15 +41,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   }
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+    <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 sm:p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-800">
         <div>
           <h3 className="font-semibold text-slate-100 text-sm">{t.calendar.monthlyGrid}</h3>
           <p className="text-xs text-slate-400">
             {trip.startDate} to {trip.endDate} • {days.length} {t.calendar.totalDays}
           </p>
         </div>
-        <div className="flex items-center gap-3 text-xs text-slate-400">
+        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
           <span className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded bg-emerald-600/40 border border-emerald-500"></span>{' '}
             {t.calendar.stay}

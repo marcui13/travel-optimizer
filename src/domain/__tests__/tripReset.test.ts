@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getJapanGoldenRouteSampleTrip, getEuropeGrandTourSampleTrip } from '../tripDefaults';
-import { shiftTripDates, isTripCompleted, resetTripToCleanState } from '../tripHelpers';
+import { shiftTripDates, isTripCompleted, resetTripToCleanState, resetTripWithCustomParams } from '../tripHelpers';
 
 describe('Trip Reset & History Domain Logic', () => {
   it('detects a completed trip properly', () => {
@@ -54,4 +54,45 @@ describe('Trip Reset & History Domain Logic', () => {
     expect(cleaned.status).toBe('planned');
     expect(cleaned.itinerary.days.length).toBe(europeTrip.itinerary.days.length);
   });
+
+  it('resets a trip with edited custom parameters (name, dates, pace, transport)', async () => {
+    const europeTrip = getEuropeGrandTourSampleTrip();
+
+    const reset = await resetTripWithCustomParams(europeTrip, {
+      name: 'Ruta Mediterránea y Alpina',
+      startDate: '2027-09-01',
+      endDate: '2027-09-20',
+      travelStyle: 'relaxed',
+      preferTrain: true,
+    });
+
+    expect(reset.name).toBe('Ruta Mediterránea y Alpina');
+    expect(reset.startDate).toBe('2027-09-01');
+    expect(reset.endDate).toBe('2027-09-20');
+    expect(reset.status).toBe('planned');
+    expect(reset.preferences.travelStyle).toBe('relaxed');
+    expect(reset.preferences.transportationPreference).toContain('train');
+    expect(reset.itinerary.days[0].date).toBe('2027-09-01');
+    expect(reset.itinerary.days[reset.itinerary.days.length - 1].date).toBe('2027-09-20');
+  });
+
+  it('resets a trip with edited cities list, adding new cities and rebuilding transportation', async () => {
+    const europeTrip = getEuropeGrandTourSampleTrip();
+
+    const newCities = ['Madrid', 'Barcelona', 'Rome', 'Florence'];
+    const reset = await resetTripWithCustomParams(europeTrip, {
+      cityNames: newCities,
+      startDate: '2027-05-01',
+      endDate: '2027-05-15',
+    });
+
+    expect(reset.destinations.map((d) => d.name)).toEqual(newCities);
+    expect(reset.destinations.length).toBe(4);
+    // Verified 3 transit segments between 4 cities
+    expect(reset.transportation.length).toBe(3);
+    expect(reset.transportation[0].from.name.toLowerCase()).toContain('madrid');
+    expect(reset.transportation[0].to.name.toLowerCase()).toContain('barcelona');
+    expect(reset.itinerary.days.length).toBe(15); // May 1 to May 15 inclusive
+  });
 });
+
