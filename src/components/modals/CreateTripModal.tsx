@@ -5,7 +5,9 @@ import { Sparkles, FormInput, X, Wand2, ArrowRight } from 'lucide-react';
 import { createTripFromPrompt } from '../../services/ai/localAiPlanner';
 import { generateItineraryWithAi } from '../../services/ai/aiClient';
 import { buildItineraryFromDestinations } from '../../domain/tripHelpers';
-import { resolveLocation } from '../../services/geocoding/geocodingService';
+import { resolveLocationAsync } from '../../services/geocoding/geocodingService';
+import { LocationSearchInput } from '../common/LocationSearchInput';
+import { GeocodingSearchResult } from '../../services/geocoding/types';
 import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface CreateTripModalProps {
@@ -61,11 +63,30 @@ export const CreateTripModal: React.FC<CreateTripModalProps> = ({
       created.startDate = tripPromptParsed.startDate || created.startDate;
       created.endDate = tripPromptParsed.endDate || created.endDate;
 
+      // Ensure all locations are resolved with high-precision coordinates
+      setStatusMessage(lang === 'es' ? 'Geocodificando y verificando coordenadas...' : 'Geocoding and verifying coordinates...');
+      await Promise.all(
+        created.destinations.map(async (dest) => {
+          dest.location = await resolveLocationAsync(dest.name);
+        })
+      );
+      if (created.destinations.length > 0) {
+        created.origin = created.destinations[0].location;
+      }
+
       onTripCreated(created);
       onClose();
     } catch (err) {
       console.error(err);
       const created = createTripFromPrompt(promptText);
+      await Promise.all(
+        created.destinations.map(async (dest) => {
+          dest.location = await resolveLocationAsync(dest.name);
+        })
+      );
+      if (created.destinations.length > 0) {
+        created.origin = created.destinations[0].location;
+      }
       onTripCreated(created);
       onClose();
     } finally {
@@ -73,7 +94,27 @@ export const CreateTripModal: React.FC<CreateTripModalProps> = ({
     }
   };
 
-  const handleCreateStructured = (e: React.FormEvent) => {
+  const handleAddDestinationFromSearch = (result: GeocodingSearchResult) => {
+    const currentList = destinationsInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!currentList.some((c) => c.toLowerCase() === result.name.toLowerCase())) {
+      const nextList = [...currentList, result.name];
+      setDestinationsInput(nextList.join(', '));
+    }
+  };
+
+  const handleRemoveDestination = (indexToRemove: number) => {
+    const currentList = destinationsInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const nextList = currentList.filter((_, idx) => idx !== indexToRemove);
+    setDestinationsInput(nextList.join(', '));
+  };
+
+  const handleCreateStructured = async (e: React.FormEvent) => {
     e.preventDefault();
     const cityList = destinationsInput
       .split(',')
@@ -82,56 +123,69 @@ export const CreateTripModal: React.FC<CreateTripModalProps> = ({
 
     if (cityList.length === 0) return;
 
-    const destinations = cityList.map((city, idx) => ({
-      id: `dest-${idx + 1}`,
-      name: city,
-      location: resolveLocation(city),
-      plannedNights: Math.max(2, Math.floor(24 / Math.max(1, cityList.length))),
-      minimumNights: 2,
-      priority: idx === 0 || idx === cityList.length - 1 ? ('high' as const) : ('medium' as const),
-    }));
+    setIsLoading(true);
+    setStatusMessage(lang === 'es' ? 'Geocodificando destinos...' : 'Geocoding destinations...');
 
-    const { itineraryDays, transportationSegments } = buildItineraryFromDestinations(
-      destinations,
-      startDate,
-      endDate,
-      undefined,
-      preferTrain
-    );
+    try {
+      const resolvedLocations = await Promise.all(
+        cityList.map(async (city) => {
+          return await resolveLocationAsync(city);
+        })
+      );
 
-    const trip: Trip = {
-      id: `trip-${Date.now()}`,
-      name: tripName,
-      startDate,
-      endDate,
-      origin: destinations[0]?.location,
-      destinations,
-      events: [],
-      reservations: [],
-      transportation: transportationSegments,
-      constraints: [
-        {
-          id: 'c-fixed-1',
-          type: 'hard',
-          description: `Finish trip in ${cityList[cityList.length - 1]} by ${endDate}`,
-          targetDestinationId: destinations[destinations.length - 1].id,
-          targetDate: endDate,
+      const destinations = cityList.map((city, idx) => ({
+        id: `dest-${idx + 1}`,
+        name: city,
+        location: resolvedLocations[idx],
+        plannedNights: Math.max(2, Math.floor(24 / Math.max(1, cityList.length))),
+        minimumNights: 2,
+        priority: idx === 0 || idx === cityList.length - 1 ? ('high' as const) : ('medium' as const),
+      }));
+
+      const { itineraryDays, transportationSegments } = buildItineraryFromDestinations(
+        destinations,
+        startDate,
+        endDate,
+        undefined,
+        preferTrain
+      );
+
+      const trip: Trip = {
+        id: `trip-${Date.now()}`,
+        name: tripName,
+        startDate,
+        endDate,
+        origin: destinations[0]?.location,
+        destinations,
+        events: [],
+        reservations: [],
+        transportation: transportationSegments,
+        constraints: [
+          {
+            id: 'c-fixed-1',
+            type: 'hard',
+            description: `Finish trip in ${cityList[cityList.length - 1]} by ${endDate}`,
+            targetDestinationId: destinations[destinations.length - 1].id,
+            targetDate: endDate,
+          },
+        ],
+        preferences: {
+          travelStyle: style,
+          transportationPreference: preferTrain ? ['train'] : ['flight'],
+          minimizeHotelChanges: true,
+          minimizeTravelTime: true,
         },
-      ],
-      preferences: {
-        travelStyle: style,
-        transportationPreference: preferTrain ? ['train'] : ['flight'],
-        minimizeHotelChanges: true,
-        minimizeTravelTime: true,
-      },
-      itinerary: {
-        days: itineraryDays,
-      },
-      updatedAt: new Date().toISOString(),
-    };
+        itinerary: {
+          days: itineraryDays,
+        },
+        updatedAt: new Date().toISOString(),
+      };
 
-    onTripCreated(trip);
-    onClose();
+      onTripCreated(trip);
+      onClose();
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -285,16 +339,75 @@ export const CreateTripModal: React.FC<CreateTripModalProps> = ({
               </div>
             </div>
 
-            <div>
-              <label className="block text-slate-300 font-medium mb-1">
-                {t.modals.createTrip.destinationsList}
+            <div className="space-y-2">
+              <label className="block text-slate-300 font-medium">
+                {lang === 'es' ? 'Buscar y agregar destinos' : 'Search & add destinations'}
               </label>
-              <textarea
-                rows={2}
-                value={destinationsInput}
-                onChange={(e) => setDestinationsInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500"
+              <LocationSearchInput
+                onSelect={handleAddDestinationFromSearch}
+                placeholder={
+                  lang === 'es'
+                    ? 'Escribe para buscar cualquier ciudad (ej. Sintra, Girona, Interlaken)...'
+                    : 'Type to search any city (e.g. Sintra, Girona, Interlaken)...'
+                }
               />
+
+              {/* Current destination chips */}
+              <div className="pt-1">
+                <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1.5">
+                  <span>
+                    {lang === 'es' ? 'Paradas del viaje' : 'Trip stops'}{' '}
+                    ({destinationsInput.split(',').filter(Boolean).length})
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    {lang === 'es'
+                      ? 'Reconocimiento geográfico dinámico'
+                      : 'Dynamic geographic geocoding'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 bg-slate-950/70 border border-slate-800/80 rounded-xl">
+                  {destinationsInput
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                    .map((city, idx) => (
+                      <span
+                        key={`${city}-${idx}`}
+                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-slate-800/90 text-slate-200 border border-slate-700/60 shadow-sm"
+                      >
+                        <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        <span className="font-medium">{city}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveDestination(idx)}
+                          className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition-colors"
+                          title={lang === 'es' ? `Eliminar ${city}` : `Remove ${city}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                </div>
+              </div>
+
+              {/* Collapsible raw text input */}
+              <details className="text-[11px] text-slate-400">
+                <summary className="cursor-pointer hover:text-slate-300 py-1 transition-colors select-none">
+                  {lang === 'es'
+                    ? 'O editar lista de ciudades separadas por comas'
+                    : 'Or edit raw comma-separated list'}
+                </summary>
+                <div className="pt-1.5">
+                  <textarea
+                    rows={2}
+                    value={destinationsInput}
+                    onChange={(e) => setDestinationsInput(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 text-xs font-mono"
+                  />
+                </div>
+              </details>
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-1">

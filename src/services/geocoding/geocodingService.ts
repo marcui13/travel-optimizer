@@ -1,5 +1,7 @@
 import { Location, TransportMode } from '../../domain/types';
-
+import { GeocodingSearchResult, GeocodingOptions } from './types';
+import { getCachedLocation, saveCachedLocation, getAllCachedLocations } from './cache';
+import { getActiveGeocodingProvider } from './providerManager';
 export interface CityHubInfo {
   name: string;
   country: string;
@@ -810,7 +812,19 @@ export function resolveLocation(cityName: string, country?: string): Location {
     }
   }
 
-  // 4. Safe substring match for longer city names (min 4 chars to prevent false matches)
+  // 4. Check persistent geocoding cache (previously resolved cities from Nominatim/Mapbox)
+  const cached = getCachedLocation(trimmed);
+  if (cached) {
+    return {
+      name: cached.name || trimmed,
+      country: cached.country || country || 'Europe',
+      latitude: cached.latitude,
+      longitude: cached.longitude,
+      cityCode: cached.cityCode,
+    };
+  }
+
+  // 5. Safe substring match for longer city names (min 4 chars to prevent false matches)
   if (cleanKey.length >= 4) {
     for (const hub of Object.values(CITY_HUBS)) {
       const hNorm = hub.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -827,7 +841,7 @@ export function resolveLocation(cityName: string, country?: string): Location {
     }
   }
 
-  // 5. Deterministic fallback (ZERO Math.random!)
+  // 6. Deterministic fallback (ZERO Math.random!)
   // Computes a stable coordinate so the same city always renders in the exact same spot.
   // If a recognized country is provided, center around that country's capital/hub!
   let baseLat = 48.5;
@@ -858,6 +872,146 @@ export function resolveLocation(cityName: string, country?: string): Location {
     longitude: +(baseLon + deterministicLonOffset).toFixed(4),
   };
 }
+
+/**
+ * Asynchronously resolves a location.
+ * Checks local database (0ms), checks cache (0ms),
+ * and queries the active remote geocoding provider (Nominatim by default)
+ * if not already cached. Persists result to cache for instant future lookups.
+ */
+export async function resolveLocationAsync(cityName: string, country?: string): Promise<Location> {
+  const trimmed = cityName.trim();
+  if (!trimmed) {
+    return resolveLocation(cityName, country);
+  }
+
+  // Fast-path: check if it's already a known hub or already in cache
+  const normalizedKey = trimmed.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+  const aliasKey = SPANISH_CITY_ALIASES[normalizedKey] || normalizedKey;
+
+  if (CITY_HUBS[aliasKey] || CITY_HUBS[normalizedKey] || COUNTRY_HUBS[normalizedKey]) {
+    return resolveLocation(trimmed, country);
+  }
+
+  const cached = getCachedLocation(trimmed);
+  if (cached) {
+    return cached;
+  }
+
+  // Try remote provider (Nominatim by default)
+  try {
+    const provider = getActiveGeocodingProvider();
+    const results = await provider.search(trimmed, { limit: 1 });
+    if (results && results.length > 0) {
+      const best = results[0];
+      const resolved: Location = {
+        name: best.name || trimmed,
+        country: best.country || country || 'Europe',
+        latitude: best.latitude,
+        longitude: best.longitude,
+      };
+      saveCachedLocation(trimmed, resolved);
+      return resolved;
+    }
+  } catch (err) {
+    console.warn(`[Geocoding] Remote lookup failed for "${trimmed}", using deterministic fallback:`, err);
+  }
+
+  return resolveLocation(trimmed, country);
+}
+
+/**
+ * Searches locations matching a query string.
+ * Combines instant local database matches with active remote geocoder (Nominatim/Mapbox/OpenCage).
+ */
+export async function searchLocations(
+  query: string,
+  options?: GeocodingOptions
+): Promise<GeocodingSearchResult[]> {
+  const trimmed = query.trim();
+  if (!trimmed || trimmed.length < 2) return [];
+
+  const limit = options?.limit || 6;
+  const results: GeocodingSearchResult[] = [];
+  const seenKeys = new Set<string>();
+
+  const addResult = (res: GeocodingSearchResult) => {
+    const key = `${res.name.toLowerCase()}-${res.country.toLowerCase()}`;
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      results.push(res);
+    }
+  };
+
+  const normQuery = trimmed
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  // 1. Check local hubs & aliases
+  for (const [key, hub] of Object.entries(CITY_HUBS)) {
+    const hubNorm = hub.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (key.startsWith(normQuery) || hubNorm.includes(normQuery)) {
+      addResult({
+        id: `local-${key}`,
+        name: hub.name,
+        displayName: `${hub.name}, ${hub.country}`,
+        country: hub.country,
+        latitude: hub.latitude,
+        longitude: hub.longitude,
+        cityCode: hub.cityCode,
+        provider: 'local',
+        confidence: key === normQuery || hubNorm === normQuery ? 1.0 : 0.9,
+      });
+    }
+    if (results.length >= limit) break;
+  }
+
+  // 2. Check cached locations
+  const cachedAll = getAllCachedLocations();
+  for (const [key, loc] of Object.entries(cachedAll)) {
+    if (key.includes(normQuery) || loc.name.toLowerCase().includes(normQuery)) {
+      addResult({
+        id: `cache-${key}`,
+        name: loc.name,
+        displayName: `${loc.name}, ${loc.country || ''}`,
+        country: loc.country || 'Unknown',
+        latitude: loc.latitude ?? 0,
+        longitude: loc.longitude ?? 0,
+        provider: 'local',
+        confidence: 0.95,
+      });
+    }
+    if (results.length >= limit) break;
+  }
+
+  // 3. Query remote provider if results are below limit
+  if (results.length < limit) {
+    try {
+      const provider = getActiveGeocodingProvider();
+      const remoteResults = await provider.search(trimmed, {
+        limit: limit - results.length + 2,
+        language: options?.language,
+        countryCode: options?.countryCode,
+      });
+      for (const remote of remoteResults) {
+        addResult(remote);
+        saveCachedLocation(remote.name, {
+          name: remote.name,
+          country: remote.country,
+          latitude: remote.latitude,
+          longitude: remote.longitude,
+        });
+        if (results.length >= limit) break;
+      }
+    } catch (err) {
+      console.warn('[Geocoding Search] Remote search error:', err);
+    }
+  }
+
+  return results.slice(0, limit);
+}
+
 
 /**
  * Recommends optimal transport mode and duration based on distance and preferences

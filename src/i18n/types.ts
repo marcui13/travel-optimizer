@@ -208,6 +208,23 @@ export interface Translations {
       testing: string;
       ollamaEndpoint: string;
       getKeyAt: string;
+      tabAi: string;
+      tabGeocoding: string;
+      geoProviderLabel: string;
+      geoProviderDesc: string;
+      geoNominatimTitle: string;
+      geoNominatimDesc: string;
+      geoMapboxTitle: string;
+      geoMapboxDesc: string;
+      geoOpencageTitle: string;
+      geoOpencageDesc: string;
+      geoCacheTitle: string;
+      geoCacheDesc: string;
+      geoClearCache: string;
+      geoCacheCleared: string;
+      geoTestSuccess: string;
+      geoTestButton: string;
+      geoTesting: string;
     };
     validation: {
       title: string;

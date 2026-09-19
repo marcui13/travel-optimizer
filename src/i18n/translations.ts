@@ -216,6 +216,28 @@ export const enTranslations: Translations = {
       testing: 'Testing...',
       ollamaEndpoint: 'Ollama Server Endpoint',
       getKeyAt: 'Get API Key at',
+      tabAi: 'AI Intelligence',
+      tabGeocoding: 'Maps & Geocoding',
+      geoProviderLabel: 'Active Geocoding Service',
+      geoProviderDesc:
+        'Resolves destination names into precise geographical coordinates for route calculations and map rendering.',
+      geoNominatimTitle: 'OpenStreetMap Nominatim',
+      geoNominatimDesc:
+        'Free, open source, and requires no API key. Community-driven global geocoding with zero configuration.',
+      geoMapboxTitle: 'Mapbox Geocoding',
+      geoMapboxDesc:
+        'Ultra-fast search with typo tolerance and up to 100,000 monthly requests on free tier.',
+      geoOpencageTitle: 'OpenCage Geocoder',
+      geoOpencageDesc:
+        'Aggregated open data (OSM, GeoNames) with 2,500 requests/day and no surprise billing.',
+      geoCacheTitle: 'Local Geocoding Cache (Tier 2)',
+      geoCacheDesc:
+        'Resolved locations are stored in your browser for instant 0ms retrieval with zero network traffic.',
+      geoClearCache: 'Clear Geocoding Cache',
+      geoCacheCleared: 'Cache cleared successfully!',
+      geoTestSuccess: 'Connection verified successfully!',
+      geoTestButton: 'Test Geocoding Provider',
+      geoTesting: 'Testing...',
     },
     validation: {
       title: 'Itinerary Validation Analysis',
@@ -491,6 +513,28 @@ export const esTranslations: Translations = {
       testing: 'Verificando...',
       ollamaEndpoint: 'URL del Servidor Ollama',
       getKeyAt: 'Obtener clave en',
+      tabAi: 'Inteligencia Artificial',
+      tabGeocoding: 'Mapas y Geocodificación',
+      geoProviderLabel: 'Servicio de Geocodificación Activo',
+      geoProviderDesc:
+        'Convierte nombres de ciudades y destinos en coordenadas exactas para optimización y cálculo de trayectos.',
+      geoNominatimTitle: 'OpenStreetMap Nominatim',
+      geoNominatimDesc:
+        'Gratuito, de código abierto y sin clave obligatoria. Búsqueda comunitaria global sin configuración.',
+      geoMapboxTitle: 'Mapbox Geocoding',
+      geoMapboxDesc:
+        'Búsqueda ultrarrápida con tolerancia a errores tipográficos y hasta 100.000 consultas/mes gratuitas.',
+      geoOpencageTitle: 'OpenCage Geocoder',
+      geoOpencageDesc:
+        'Agregador de datos abiertos con 2.500 peticiones/día gratuitas y sin facturación sorpresiva.',
+      geoCacheTitle: 'Caché de Geocodificación Local (Nivel 2)',
+      geoCacheDesc:
+        'Las ubicaciones consultadas se guardan en tu navegador para acceso inmediato a 0ms sin consumir red.',
+      geoClearCache: 'Limpiar Caché de Geocodificación',
+      geoCacheCleared: '¡Caché limpiada correctamente!',
+      geoTestSuccess: '¡Conexión verificada exitosamente!',
+      geoTestButton: 'Probar Geocodificación',
+      geoTesting: 'Verificando...',
     },
     validation: {
       title: 'Análisis de Validación del Itinerario',
