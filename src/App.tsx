@@ -1,0 +1,649 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import confetti from 'canvas-confetti';
+import {
+  Trip,
+  OptimizationResult,
+  Event,
+  Reservation,
+  Constraint,
+  TravelPreferences,
+} from './domain/types';
+import { getEuropeGrandTourSampleTrip } from './domain/tripDefaults';
+import { validateTrip } from './domain/validation';
+import { I18nProvider, useI18n } from './i18n/I18nContext';
+import { Header } from './components/layout/Header';
+import { StatsBar } from './components/layout/StatsBar';
+import { InteractiveMap } from './components/map/InteractiveMap';
+import { TimelineView } from './components/itinerary/TimelineView';
+import { CalendarView } from './components/calendar/CalendarView';
+import { ConstraintsPanel } from './components/itinerary/ConstraintsPanel';
+import { AssistantPanel } from './components/assistant/AssistantPanel';
+import { CreateTripModal } from './components/modals/CreateTripModal';
+import { ImageUploadModal } from './components/modals/ImageUploadModal';
+import { ReviewExtractedModal } from './components/modals/ReviewExtractedModal';
+import { OptimizationDiffModal } from './components/modals/OptimizationDiffModal';
+import { SettingsModal } from './components/modals/SettingsModal';
+import { ValidationIssuesModal } from './components/modals/ValidationIssuesModal';
+import { TripHistoryModal } from './components/modals/TripHistoryModal';
+import { ResetTripModal } from './components/modals/ResetTripModal';
+import { CompletedTripBanner } from './components/layout/CompletedTripBanner';
+import { VisionExtractionResult } from './services/ai/visionExtractor';
+import { defaultOptimizer } from './services/optimization/optimizer';
+import { tripStorage } from './services/storage/tripStorageService';
+import {
+  ListOrdered,
+  Calendar as CalendarIcon,
+  ShieldAlert,
+  Map as MapIcon,
+  Sparkles,
+} from 'lucide-react';
+
+const AppInner: React.FC = () => {
+  const { t } = useI18n();
+
+  // 1. Persistent Trips Library
+  const [savedTrips, setSavedTrips] = useState<Trip[]>(() => tripStorage.loadTripHistory());
+  const [activeTripId, setActiveTripId] = useState<string>(() => tripStorage.getActiveTripId(savedTrips));
+
+  // 2. Core Canonical Active Trip State & Undo/Redo History
+  const [history, setHistory] = useState<Trip[]>(() => {
+    const active = savedTrips.find((t) => t.id === activeTripId) || savedTrips[0] || getEuropeGrandTourSampleTrip();
+    return [active];
+  });
+
+  const [historyIndex, setHistoryIndex] = useState<number>(0);
+  const currentTrip: Trip = history[historyIndex] || savedTrips[0] || getEuropeGrandTourSampleTrip();
+
+  // Sync active trip changes to trip storage library
+  useEffect(() => {
+    if (currentTrip && currentTrip.id) {
+      setSavedTrips((prev) => {
+        const idx = prev.findIndex((t) => t.id === currentTrip.id);
+        if (idx >= 0 && prev[idx] === currentTrip) return prev;
+        return tripStorage.upsertTripInHistory(currentTrip);
+      });
+    }
+  }, [currentTrip]);
+
+  const updateTrip = useCallback((newTrip: Trip) => {
+    setHistory((prev) => {
+      const updated = prev.slice(0, historyIndex + 1);
+      return [...updated, newTrip];
+    });
+    setHistoryIndex((prev) => prev + 1);
+  }, [historyIndex]);
+
+  const handleUndo = () => {
+    if (historyIndex > 0) setHistoryIndex(historyIndex - 1);
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) setHistoryIndex(historyIndex + 1);
+  };
+
+  // 2. Deterministic Validation
+  const validationIssues = validateTrip(currentTrip);
+
+  // 3. Selection & Synchronization State
+  const [selectedDestinationId, setSelectedDestinationId] = useState<string | null>(null);
+  const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
+  const [selectedDayDate, setSelectedDayDate] = useState<string | null>(null);
+
+  // 4. Optimization Proposal & Map Diff
+  const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
+  const [showOptimizationDiff, setShowOptimizationDiff] = useState(false);
+
+  // 5. Views & Modals
+  const [activeView, setActiveView] = useState<'split' | 'map' | 'timeline' | 'calendar'>('split');
+  const [itineraryTab, setItineraryTab] = useState<'timeline' | 'calendar' | 'constraints'>('timeline');
+  const [mobileSplitTab, setMobileSplitTab] = useState<'itinerary' | 'map' | 'assistant'>('itinerary');
+
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [isOptimizationDiffOpen, setIsOptimizationDiffOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isValidationOpen, setIsValidationOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isResetOpen, setIsResetOpen] = useState(false);
+  const [tripToReset, setTripToReset] = useState<Trip | null>(null);
+
+  // Upload review temporary state
+  const [extractedReviewData, setExtractedReviewData] = useState<VisionExtractionResult | null>(null);
+
+  // Handlers
+  const handleSelectDay = (date: string, destinationId?: string) => {
+    setSelectedDayDate(date);
+    if (destinationId) setSelectedDestinationId(destinationId);
+    setSelectedSegmentId(null);
+  };
+
+  const handleSelectDestination = (destId: string) => {
+    setSelectedDestinationId(destId);
+    const day = currentTrip.itinerary.days.find((d) => d.destinationId === destId);
+    if (day) setSelectedDayDate(day.date);
+    setSelectedSegmentId(null);
+  };
+
+  const handleSelectSegment = (segmentId: string) => {
+    setSelectedSegmentId(segmentId);
+    const seg = currentTrip.transportation.find((s) => s.id === segmentId);
+    if (seg?.date) setSelectedDayDate(seg.date);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedDestinationId(null);
+    setSelectedSegmentId(null);
+    setSelectedDayDate(null);
+  };
+
+  const handleApplyOptimization = (result: OptimizationResult) => {
+    const updatedTrip: Trip = {
+      ...currentTrip,
+      destinations: result.proposedDestinations || currentTrip.destinations,
+      transportation: result.proposedTransportation || currentTrip.transportation,
+      itinerary: result.proposedItinerary || currentTrip.itinerary,
+      updatedAt: new Date().toISOString(),
+    };
+    updateTrip(updatedTrip);
+    setOptimizationResult(null);
+    setShowOptimizationDiff(false);
+
+    try {
+      confetti({
+        particleCount: 60,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleRequestOptimization = async (profile: 'efficient' | 'balanced' | 'relaxed') => {
+    const res = await defaultOptimizer.optimize(currentTrip, { profile });
+    setOptimizationResult(res);
+    setIsOptimizationDiffOpen(true);
+  };
+
+  const handleExtractedReady = (result: VisionExtractionResult) => {
+    setExtractedReviewData(result);
+    setIsReviewOpen(true);
+  };
+
+  const handleConfirmExtracted = (events: Event[], reservations: Reservation[]) => {
+    const updatedTrip: Trip = {
+      ...currentTrip,
+      events: [...currentTrip.events, ...events],
+      reservations: [...currentTrip.reservations, ...reservations],
+      updatedAt: new Date().toISOString(),
+    };
+    updateTrip(updatedTrip);
+  };
+
+  const handleResetToDemo = () => {
+    const demo = getEuropeGrandTourSampleTrip();
+    updateTrip(demo);
+    setSelectedDestinationId(null);
+    setSelectedSegmentId(null);
+    setSelectedDayDate(null);
+    setOptimizationResult(null);
+    setShowOptimizationDiff(false);
+  };
+
+  const handleSelectTripFromHistory = (selected: Trip) => {
+    tripStorage.setActiveTripId(selected.id);
+    setActiveTripId(selected.id);
+    setHistory([selected]);
+    setHistoryIndex(0);
+    handleClearSelection();
+    setOptimizationResult(null);
+    setShowOptimizationDiff(false);
+  };
+
+  const handleDuplicateTrip = (tripId: string) => {
+    const { trips } = tripStorage.duplicateTrip(tripId, 'Copia');
+    setSavedTrips(trips);
+  };
+
+  const handleDeleteTrip = (tripId: string) => {
+    const { trips, nextActiveTripId } = tripStorage.deleteTripFromHistory(tripId);
+    setSavedTrips(trips);
+    if (tripId === activeTripId) {
+      const next = trips.find((t) => t.id === nextActiveTripId) || trips[0];
+      setActiveTripId(next.id);
+      setHistory([next]);
+      setHistoryIndex(0);
+      handleClearSelection();
+    }
+  };
+
+  const handleSaveCurrentAsCopy = () => {
+    const { trips } = tripStorage.duplicateTrip(currentTrip.id, 'Copia');
+    setSavedTrips(trips);
+  };
+
+  const handleOpenResetForTrip = (trip: Trip) => {
+    setTripToReset(trip);
+    setIsResetOpen(true);
+  };
+
+  const handleConfirmReset = (
+    tripId: string,
+    options: { mode: 'shift' | 'baseline' | 'markPlanned'; newStartDate?: string }
+  ) => {
+    const { trips, updatedTrip } = tripStorage.resetTripInHistory(tripId, options);
+    setSavedTrips(trips);
+    if (updatedTrip && tripId === currentTrip.id) {
+      setHistory([updatedTrip]);
+      setHistoryIndex(0);
+      handleClearSelection();
+      setOptimizationResult(null);
+      setShowOptimizationDiff(false);
+    }
+  };
+
+  const handleUpdateConstraints = (constraints: Constraint[]) => {
+    updateTrip({ ...currentTrip, constraints });
+  };
+
+  const handleUpdatePreferences = (preferences: TravelPreferences) => {
+    updateTrip({ ...currentTrip, preferences });
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
+      {/* 1. App Header */}
+      <Header
+        trip={currentTrip}
+        canUndo={historyIndex > 0}
+        canRedo={historyIndex < history.length - 1}
+        activeView={activeView}
+        tripsCount={savedTrips.length}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onChangeView={setActiveView}
+        onOpenCreateModal={() => setIsCreateOpen(true)}
+        onOpenUploadModal={() => setIsUploadOpen(true)}
+        onOpenSettingsModal={() => setIsSettingsOpen(true)}
+        onOpenHistoryModal={() => setIsHistoryOpen(true)}
+        onOpenResetModal={() => handleOpenResetForTrip(currentTrip)}
+        onResetToDemoTrip={handleResetToDemo}
+      />
+
+      {/* Completed Trip Notification Banner */}
+      <CompletedTripBanner
+        trip={currentTrip}
+        onOpenResetModal={() => handleOpenResetForTrip(currentTrip)}
+        onOpenHistoryModal={() => setIsHistoryOpen(true)}
+      />
+
+      {/* 2. Calculated Statistics Bar */}
+      <StatsBar
+        trip={currentTrip}
+        validationIssues={validationIssues}
+        onOpenOptimization={() => handleRequestOptimization('efficient')}
+        onOpenValidationDetails={() => setIsValidationOpen(true)}
+      />
+
+      {/* 3. Main Workspace Area */}
+      <main className="flex-1 p-3 sm:p-4 max-w-[1680px] w-full mx-auto flex flex-col gap-4">
+        {/* Full Map View */}
+        {activeView === 'map' && (
+          <div className="flex-1 min-h-[680px] rounded-xl overflow-hidden shadow-2xl">
+            <InteractiveMap
+              destinations={currentTrip.destinations}
+              transportation={currentTrip.transportation}
+              selectedDestinationId={selectedDestinationId}
+              selectedSegmentId={selectedSegmentId}
+              selectedDayDate={selectedDayDate}
+              optimizationResult={optimizationResult}
+              showOptimizationDiff={showOptimizationDiff}
+              onSelectDestination={handleSelectDestination}
+              onSelectSegment={handleSelectSegment}
+              onClearSelection={handleClearSelection}
+            />
+          </div>
+        )}
+
+        {/* Full Timeline View */}
+        {activeView === 'timeline' && (
+          <div className="max-w-4xl mx-auto w-full py-2">
+            <TimelineView
+              trip={currentTrip}
+              selectedDestinationId={selectedDestinationId}
+              selectedSegmentId={selectedSegmentId}
+              selectedDayDate={selectedDayDate}
+              onSelectDay={handleSelectDay}
+              onSelectDestination={handleSelectDestination}
+              onSelectSegment={handleSelectSegment}
+            />
+          </div>
+        )}
+
+        {/* Full Calendar View */}
+        {activeView === 'calendar' && (
+          <div className="max-w-5xl mx-auto w-full py-2">
+            <CalendarView
+              trip={currentTrip}
+              selectedDayDate={selectedDayDate}
+              onSelectDay={handleSelectDay}
+            />
+          </div>
+        )}
+
+        {/* Split Planner View (Desktop Core Layout & Mobile Segmented Controls) */}
+        {activeView === 'split' && (
+          <div className="flex flex-col gap-4">
+            {/* Mobile View Toggle Bar (Only visible on screens < 1024px) */}
+            <div
+              role="tablist"
+              aria-label="Mobile workspace view"
+              className="grid grid-cols-3 lg:hidden bg-slate-900 border border-slate-800 rounded-xl p-1 gap-1 text-xs font-semibold"
+            >
+              <button
+                role="tab"
+                id="mobile-tab-itinerary"
+                aria-selected={mobileSplitTab === 'itinerary'}
+                aria-controls="mobile-panel-itinerary"
+                onClick={() => setMobileSplitTab('itinerary')}
+                className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                  mobileSplitTab === 'itinerary'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <ListOrdered className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t.header.timeline}</span>
+              </button>
+
+              <button
+                role="tab"
+                id="mobile-tab-map"
+                aria-selected={mobileSplitTab === 'map'}
+                aria-controls="mobile-panel-map"
+                onClick={() => setMobileSplitTab('map')}
+                className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                  mobileSplitTab === 'map'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <MapIcon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t.header.mapFocus}</span>
+              </button>
+
+              <button
+                role="tab"
+                id="mobile-tab-assistant"
+                aria-selected={mobileSplitTab === 'assistant'}
+                aria-controls="mobile-panel-assistant"
+                onClick={() => setMobileSplitTab('assistant')}
+                className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                  mobileSplitTab === 'assistant'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 shrink-0 text-emerald-300" />
+                <span className="truncate">{t.header.assistant}</span>
+              </button>
+            </div>
+
+            {/* Upper Split: Map on Left, Contextual AI Assistant on Right */}
+            <div
+              className={`grid grid-cols-1 lg:grid-cols-12 gap-4 ${
+                mobileSplitTab === 'itinerary' ? 'hidden lg:grid' : 'grid'
+              }`}
+            >
+              {/* Map Panel */}
+              <div
+                id="mobile-panel-map"
+                className={`lg:col-span-7 xl:col-span-8 min-h-[420px] lg:min-h-[500px] h-[65vh] lg:h-auto rounded-xl overflow-hidden shadow-xl border border-slate-800 ${
+                  mobileSplitTab === 'map' ? 'block' : 'hidden lg:block'
+                }`}
+              >
+                <InteractiveMap
+                  destinations={currentTrip.destinations}
+                  transportation={currentTrip.transportation}
+                  selectedDestinationId={selectedDestinationId}
+                  selectedSegmentId={selectedSegmentId}
+                  selectedDayDate={selectedDayDate}
+                  optimizationResult={optimizationResult}
+                  showOptimizationDiff={showOptimizationDiff}
+                  onSelectDestination={handleSelectDestination}
+                  onSelectSegment={handleSelectSegment}
+                  onClearSelection={handleClearSelection}
+                />
+              </div>
+
+              {/* Contextual AI Assistant Panel */}
+              <div
+                id="mobile-panel-assistant"
+                className={`lg:col-span-5 xl:col-span-4 min-h-[460px] h-[72vh] lg:h-auto max-h-[700px] flex-col ${
+                  mobileSplitTab === 'assistant' ? 'flex' : 'hidden lg:flex'
+                }`}
+              >
+                <AssistantPanel
+                  trip={currentTrip}
+                  validationIssues={validationIssues}
+                  optimizationResult={optimizationResult}
+                  onApplyOptimization={handleApplyOptimization}
+                  onApplyWhatIfTrip={updateTrip}
+                  onRequestOptimization={handleRequestOptimization}
+                />
+              </div>
+            </div>
+
+            {/* Lower Workspace: Itinerary Timeline / Calendar / Constraints Tabs */}
+            <div
+              id="mobile-panel-itinerary"
+              className={`bg-slate-900/40 border border-slate-800 rounded-xl p-4 shadow-xl ${
+                mobileSplitTab === 'itinerary' ? 'block' : 'hidden lg:block'
+              }`}
+            >
+              {/* Workspace Navigation Tabs */}
+              <div
+                role="tablist"
+                aria-label="Itinerary sections"
+                className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4"
+              >
+                <div className="flex items-center gap-2">
+                  <button
+                    role="tab"
+                    id="tab-timeline"
+                    aria-selected={itineraryTab === 'timeline'}
+                    aria-controls="tabpanel-timeline"
+                    onClick={() => setItineraryTab('timeline')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                      itineraryTab === 'timeline'
+                        ? 'bg-emerald-600 text-white shadow'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    }`}
+                  >
+                    <ListOrdered className="w-3.5 h-3.5" />
+                    <span>{t.header.timeline}</span>
+                  </button>
+
+                  <button
+                    role="tab"
+                    id="tab-calendar"
+                    aria-selected={itineraryTab === 'calendar'}
+                    aria-controls="tabpanel-calendar"
+                    onClick={() => setItineraryTab('calendar')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                      itineraryTab === 'calendar'
+                        ? 'bg-emerald-600 text-white shadow'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    }`}
+                  >
+                    <CalendarIcon className="w-3.5 h-3.5" />
+                    <span>{t.header.calendar}</span>
+                  </button>
+
+                  <button
+                    role="tab"
+                    id="tab-constraints"
+                    aria-selected={itineraryTab === 'constraints'}
+                    aria-controls="tabpanel-constraints"
+                    onClick={() => setItineraryTab('constraints')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                      itineraryTab === 'constraints'
+                        ? 'bg-emerald-600 text-white shadow'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    }`}
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    <span>{t.constraints.travelPreferences}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Active Tab Content */}
+              {itineraryTab === 'timeline' && (
+                <div
+                  role="tabpanel"
+                  id="tabpanel-timeline"
+                  aria-labelledby="tab-timeline"
+                  tabIndex={0}
+                  className="max-w-4xl focus-visible:outline-none"
+                >
+                  <TimelineView
+                    trip={currentTrip}
+                    selectedDestinationId={selectedDestinationId}
+                    selectedSegmentId={selectedSegmentId}
+                    selectedDayDate={selectedDayDate}
+                    onSelectDay={handleSelectDay}
+                    onSelectDestination={handleSelectDestination}
+                    onSelectSegment={handleSelectSegment}
+                  />
+                </div>
+              )}
+
+              {itineraryTab === 'calendar' && (
+                <div
+                  role="tabpanel"
+                  id="tabpanel-calendar"
+                  aria-labelledby="tab-calendar"
+                  tabIndex={0}
+                  className="focus-visible:outline-none"
+                >
+                  <CalendarView
+                    trip={currentTrip}
+                    selectedDayDate={selectedDayDate}
+                    onSelectDay={handleSelectDay}
+                  />
+                </div>
+              )}
+
+              {itineraryTab === 'constraints' && (
+                <div
+                  role="tabpanel"
+                  id="tabpanel-constraints"
+                  aria-labelledby="tab-constraints"
+                  tabIndex={0}
+                  className="max-w-3xl focus-visible:outline-none"
+                >
+                  <ConstraintsPanel
+                    trip={currentTrip}
+                    onUpdateConstraints={handleUpdateConstraints}
+                    onUpdatePreferences={handleUpdatePreferences}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* 4. Modals */}
+      <CreateTripModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onTripCreated={(newTrip) => {
+          const updated = tripStorage.upsertTripInHistory(newTrip);
+          tripStorage.setActiveTripId(newTrip.id);
+          setSavedTrips(updated);
+          setActiveTripId(newTrip.id);
+          setHistory([newTrip]);
+          setHistoryIndex(0);
+          handleClearSelection();
+        }}
+      />
+
+      <TripHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        trips={savedTrips}
+        activeTripId={currentTrip.id}
+        onSelectTrip={handleSelectTripFromHistory}
+        onDuplicateTrip={handleDuplicateTrip}
+        onDeleteTrip={handleDeleteTrip}
+        onOpenResetModal={handleOpenResetForTrip}
+        onOpenCreateModal={() => setIsCreateOpen(true)}
+        onSaveCurrentAsCopy={handleSaveCurrentAsCopy}
+      />
+
+      {tripToReset && (
+        <ResetTripModal
+          isOpen={isResetOpen}
+          onClose={() => {
+            setIsResetOpen(false);
+            setTripToReset(null);
+          }}
+          trip={tripToReset}
+          onConfirmReset={handleConfirmReset}
+        />
+      )}
+
+      <ImageUploadModal
+        isOpen={isUploadOpen}
+        onClose={() => setIsUploadOpen(false)}
+        onExtractedReady={handleExtractedReady}
+      />
+
+      {extractedReviewData && (
+        <ReviewExtractedModal
+          isOpen={isReviewOpen}
+          onClose={() => {
+            setIsReviewOpen(false);
+            setExtractedReviewData(null);
+          }}
+          summary={extractedReviewData.summary}
+          initialItems={extractedReviewData.items}
+          trip={currentTrip}
+          onConfirmAddItems={handleConfirmExtracted}
+        />
+      )}
+
+      <OptimizationDiffModal
+        isOpen={isOptimizationDiffOpen}
+        trip={currentTrip}
+        initialResult={optimizationResult}
+        onClose={() => setIsOptimizationDiffOpen(false)}
+        onApplyOptimization={handleApplyOptimization}
+        onToggleMapPreview={(active) => setShowOptimizationDiff(active)}
+      />
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSettingsSaved={() => {}}
+      />
+
+      <ValidationIssuesModal
+        isOpen={isValidationOpen}
+        onClose={() => setIsValidationOpen(false)}
+        issues={validationIssues}
+      />
+    </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <I18nProvider>
+      <AppInner />
+    </I18nProvider>
+  );
+};

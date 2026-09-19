@@ -1,0 +1,778 @@
+import { Location, TransportMode } from '../../domain/types';
+
+export interface CityHubInfo {
+  name: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  cityCode: string;
+  popularAirports?: string[];
+  mainTrainStation?: string;
+  defaultDescription?: string;
+}
+
+// Comprehensive offline database for instant, zero-latency location resolution
+export const CITY_HUBS: Record<string, CityHubInfo> = {
+  lisbon: {
+    name: 'Lisbon',
+    country: 'Portugal',
+    latitude: 38.7223,
+    longitude: -9.1393,
+    cityCode: 'LIS',
+    popularAirports: ['Humberto Delgado Airport (LIS)'],
+    mainTrainStation: 'Lisboa Santa Apolónia',
+    defaultDescription: 'Capital of Portugal, famed for pastel architecture and historic trams.',
+  },
+  madrid: {
+    name: 'Madrid',
+    country: 'Spain',
+    latitude: 40.4168,
+    longitude: -3.7038,
+    cityCode: 'MAD',
+    popularAirports: ['Adolfo Suárez Madrid–Barajas Airport (MAD)'],
+    mainTrainStation: 'Madrid Puerta de Atocha',
+    defaultDescription: 'Spain’s vibrant central capital with world-class museums and parks.',
+  },
+  barcelona: {
+    name: 'Barcelona',
+    country: 'Spain',
+    latitude: 41.3879,
+    longitude: 2.1699,
+    cityCode: 'BCN',
+    popularAirports: ['Josep Tarradellas Barcelona-El Prat (BCN)'],
+    mainTrainStation: 'Barcelona Sants',
+    defaultDescription: 'Catalan jewel known for Gaudí masterpieces and seaside promenades.',
+  },
+  rome: {
+    name: 'Rome',
+    country: 'Italy',
+    latitude: 41.9028,
+    longitude: 12.4964,
+    cityCode: 'FCO',
+    popularAirports: ['Leonardo da Vinci–Fiumicino (FCO)'],
+    mainTrainStation: 'Roma Termini',
+    defaultDescription: 'The Eternal City packed with ancient Roman landmarks and culinary hubs.',
+  },
+  florence: {
+    name: 'Florence',
+    country: 'Italy',
+    latitude: 43.7696,
+    longitude: 11.2558,
+    cityCode: 'FLR',
+    popularAirports: ['Florence Airport (FLR)', 'Pisa Airport (PSA)'],
+    mainTrainStation: 'Firenze Santa Maria Novella',
+    defaultDescription: 'Cradle of Renaissance art, the Uffizi, and the Duomo.',
+  },
+  venice: {
+    name: 'Venice',
+    country: 'Italy',
+    latitude: 45.4408,
+    longitude: 12.3155,
+    cityCode: 'VCE',
+    popularAirports: ['Venice Marco Polo (VCE)'],
+    mainTrainStation: 'Venezia Santa Lucia',
+    defaultDescription: 'City of canals, gondolas, and Gothic architecture.',
+  },
+  milan: {
+    name: 'Milan',
+    country: 'Italy',
+    latitude: 45.4642,
+    longitude: 9.1900,
+    cityCode: 'MXP',
+    popularAirports: ['Milan Malpensa (MXP)', 'Linate (LIN)'],
+    mainTrainStation: 'Milano Centrale',
+    defaultDescription: 'Global fashion and financial capital anchored by the majestic Duomo.',
+  },
+  budapest: {
+    name: 'Budapest',
+    country: 'Hungary',
+    latitude: 47.4979,
+    longitude: 19.0402,
+    cityCode: 'BUD',
+    popularAirports: ['Budapest Ferenc Liszt (BUD)'],
+    mainTrainStation: 'Budapest Keleti',
+    defaultDescription: 'The Pearl of the Danube, known for thermal baths and Parliament.',
+  },
+  vienna: {
+    name: 'Vienna',
+    country: 'Austria',
+    latitude: 48.2082,
+    longitude: 16.3738,
+    cityCode: 'VIE',
+    popularAirports: ['Vienna International Airport (VIE)'],
+    mainTrainStation: 'Wien Hauptbahnhof',
+    defaultDescription: 'Imperial palaces, grand cafes, and classical musical heritage.',
+  },
+  prague: {
+    name: 'Prague',
+    country: 'Czech Republic',
+    latitude: 50.0755,
+    longitude: 14.4378,
+    cityCode: 'PRG',
+    popularAirports: ['Václav Havel Airport Prague (PRG)'],
+    mainTrainStation: 'Praha hlavní nádraží',
+    defaultDescription: 'City of a Hundred Spires, historic Charles Bridge, and Old Town Square.',
+  },
+  berlin: {
+    name: 'Berlin',
+    country: 'Germany',
+    latitude: 52.5200,
+    longitude: 13.4050,
+    cityCode: 'BER',
+    popularAirports: ['Berlin Brandenburg Airport (BER)'],
+    mainTrainStation: 'Berlin Hauptbahnhof',
+    defaultDescription: 'Dynamic hub of history, art galleries, and vibrant nightlife.',
+  },
+  amsterdam: {
+    name: 'Amsterdam',
+    country: 'Netherlands',
+    latitude: 52.3676,
+    longitude: 4.9041,
+    cityCode: 'AMS',
+    popularAirports: ['Amsterdam Airport Schiphol (AMS)'],
+    mainTrainStation: 'Amsterdam Centraal',
+    defaultDescription: 'Canal rings, cycling culture, Rijksmuseum, and Van Gogh Museum.',
+  },
+  paris: {
+    name: 'Paris',
+    country: 'France',
+    latitude: 48.8566,
+    longitude: 2.3522,
+    cityCode: 'CDG',
+    popularAirports: ['Charles de Gaulle (CDG)', 'Orly (ORY)'],
+    mainTrainStation: 'Gare de Lyon / Gare du Nord',
+    defaultDescription: 'The City of Light, world-renowned gastronomy and iconic landmarks.',
+  },
+  london: {
+    name: 'London',
+    country: 'United Kingdom',
+    latitude: 51.5074,
+    longitude: -0.1278,
+    cityCode: 'LON',
+    popularAirports: ['Heathrow (LHR)', 'Gatwick (LGW)'],
+    mainTrainStation: 'St Pancras International',
+    defaultDescription: 'Historic global metropolis with premier theaters, parks, and museums.',
+  },
+  munich: {
+    name: 'Munich',
+    country: 'Germany',
+    latitude: 48.1351,
+    longitude: 11.5820,
+    cityCode: 'MUC',
+    popularAirports: ['Munich Airport (MUC)'],
+    mainTrainStation: 'München Hauptbahnhof',
+    defaultDescription: 'Bavarian culture, beer gardens, and gateway to the Alps.',
+  },
+  zurich: {
+    name: 'Zurich',
+    country: 'Switzerland',
+    latitude: 47.3769,
+    longitude: 8.5417,
+    cityCode: 'ZRH',
+    popularAirports: ['Zurich Airport (ZRH)'],
+    mainTrainStation: 'Zürich Hauptbahnhof',
+    defaultDescription: 'Scenic lakeside financial center with pristine alpine backdrop.',
+  },
+  dubrovnik: {
+    name: 'Dubrovnik',
+    country: 'Croatia',
+    latitude: 42.6507,
+    longitude: 18.0944,
+    cityCode: 'DBV',
+    popularAirports: ['Dubrovnik Airport (DBV)'],
+    mainTrainStation: 'Dubrovnik Bus Terminal',
+    defaultDescription: 'Walled medieval city overlooking the azure Adriatic Sea.',
+  },
+  split: {
+    name: 'Split',
+    country: 'Croatia',
+    latitude: 43.5081,
+    longitude: 16.4402,
+    cityCode: 'SPU',
+    popularAirports: ['Split Airport (SPU)'],
+    mainTrainStation: 'Split Train Station',
+    defaultDescription: 'Dalmatian coast port built around the ancient Roman Diocletian Palace.',
+  },
+  porto: {
+    name: 'Porto',
+    country: 'Portugal',
+    latitude: 41.1579,
+    longitude: -8.6291,
+    cityCode: 'OPO',
+    popularAirports: ['Francisco Sá Carneiro (OPO)'],
+    mainTrainStation: 'Porto São Bento',
+    defaultDescription: 'Famed for Port wine, steep tiled alleys, and the Douro River.',
+  },
+  seville: {
+    name: 'Seville',
+    country: 'Spain',
+    latitude: 37.3891,
+    longitude: -5.9845,
+    cityCode: 'SVQ',
+    popularAirports: ['Seville Airport (SVQ)'],
+    mainTrainStation: 'Sevilla Santa Justa',
+    defaultDescription: 'Andalusian capital known for flamenco dancing and the Alcázar palace.',
+  },
+  athens: {
+    name: 'Athens',
+    country: 'Greece',
+    latitude: 37.9838,
+    longitude: 23.7275,
+    cityCode: 'ATH',
+    popularAirports: ['Athens Eleftherios Venizelos (ATH)'],
+    mainTrainStation: 'Larissa Station',
+    defaultDescription: 'Historical heart of classical Greece, dominated by the Acropolis.',
+  },
+  buenos_aires: {
+    name: 'Buenos Aires',
+    country: 'Argentina',
+    latitude: -34.6037,
+    longitude: -58.3816,
+    cityCode: 'EZE',
+    popularAirports: ['Ministro Pistarini Ezeiza (EZE)', 'Aeroparque (AEP)'],
+    mainTrainStation: 'Retiro',
+    defaultDescription: 'Vibrant Latin American metropolis with European architecture and tango.',
+  },
+  new_york: {
+    name: 'New York',
+    country: 'United States',
+    latitude: 40.7128,
+    longitude: -74.0060,
+    cityCode: 'NYC',
+    popularAirports: ['JFK', 'EWR', 'LGA'],
+    mainTrainStation: 'Penn Station / Moynihan Train Hall',
+    defaultDescription: 'The city that never sleeps, with Central Park, Broadway, and world culture.',
+  },
+  tokyo: {
+    name: 'Tokyo',
+    country: 'Japan',
+    latitude: 35.6762,
+    longitude: 139.6503,
+    cityCode: 'TYO',
+    popularAirports: ['Haneda Airport (HND)', 'Narita Airport (NRT)'],
+    mainTrainStation: 'Tokyo Station (Shinkansen Hub)',
+    defaultDescription: 'Electrifying neon metropolis fusing ultra-modern innovation with timeless Shinto shrines.',
+  },
+  kyoto: {
+    name: 'Kyoto',
+    country: 'Japan',
+    latitude: 35.0116,
+    longitude: 135.7681,
+    cityCode: 'UKY',
+    popularAirports: ['Kansai International (KIX)'],
+    mainTrainStation: 'Kyoto Station',
+    defaultDescription: 'Ancient imperial capital celebrated for classical Buddhist temples, gardens, and geisha districts.',
+  },
+  osaka: {
+    name: 'Osaka',
+    country: 'Japan',
+    latitude: 34.6937,
+    longitude: 135.5023,
+    cityCode: 'OSA',
+    popularAirports: ['Itami Airport (ITM)', 'Kansai International (KIX)'],
+    mainTrainStation: 'Shin-Osaka Station',
+    defaultDescription: 'Food capital of Japan renowned for Dotonbori street food, bustling nightlife, and Osaka Castle.',
+  },
+  granada: {
+    name: 'Granada',
+    country: 'Spain',
+    latitude: 37.1773,
+    longitude: -3.5986,
+    cityCode: 'GRX',
+    popularAirports: ['Federico García Lorca Granada Airport (GRX)'],
+    mainTrainStation: 'Granada Train Station',
+    defaultDescription: 'Andalusian jewel framed by the Sierra Nevada, home to the breathtaking Alhambra fortress.',
+  },
+  cordoba: {
+    name: 'Cordoba',
+    country: 'Spain',
+    latitude: 37.8882,
+    longitude: -4.7794,
+    cityCode: 'ODB',
+    popularAirports: ['Seville Airport (SVQ)', 'Málaga Airport (AGP)'],
+    mainTrainStation: 'Córdoba Central',
+    defaultDescription: 'Historic crossroads of cultures famed for the Mosque-Cathedral and flower-filled courtyards.',
+  },
+  // Belgium (Bélgica)
+  bruges: {
+    name: 'Bruges',
+    country: 'Belgium',
+    latitude: 51.2093,
+    longitude: 3.2247,
+    cityCode: 'BKG',
+    popularAirports: ['Brussels Airport (BRU)', 'Brussels South Charleroi (CRL)'],
+    mainTrainStation: 'Brugge Station',
+    defaultDescription: 'Fairytale medieval Belgian jewel famed for winding canals, cobbled lanes, and Flemish art.',
+  },
+  brussels: {
+    name: 'Brussels',
+    country: 'Belgium',
+    latitude: 50.8503,
+    longitude: 4.3517,
+    cityCode: 'BRU',
+    popularAirports: ['Brussels Airport (BRU)', 'Brussels South Charleroi (CRL)'],
+    mainTrainStation: 'Bruxelles-Midi / Brussel-Zuid',
+    defaultDescription: 'Capital of Belgium and the EU, celebrated for the Grand Place, waffles, and artisan chocolate.',
+  },
+  ghent: {
+    name: 'Ghent',
+    country: 'Belgium',
+    latitude: 51.0543,
+    longitude: 3.7174,
+    cityCode: 'GNE',
+    popularAirports: ['Brussels Airport (BRU)'],
+    mainTrainStation: 'Gent-Sint-Pieters',
+    defaultDescription: 'Vibrant university town blending medieval Gravensteen castle with picturesque riverside quays.',
+  },
+  antwerp: {
+    name: 'Antwerp',
+    country: 'Belgium',
+    latitude: 51.2194,
+    longitude: 4.4025,
+    cityCode: 'ANR',
+    popularAirports: ['Antwerp Airport (ANR)', 'Brussels Airport (BRU)'],
+    mainTrainStation: 'Antwerpen-Centraal',
+    defaultDescription: 'Diamond hub and fashion center boasting one of the world’s most spectacular railway stations.',
+  },
+  // France
+  nice: {
+    name: 'Nice',
+    country: 'France',
+    latitude: 43.7102,
+    longitude: 7.2620,
+    cityCode: 'NCE',
+    popularAirports: ['Nice Côte d’Azur (NCE)'],
+    mainTrainStation: 'Nice-Ville',
+    defaultDescription: 'Capital of the French Riviera with the iconic Promenade des Anglais and turquoise waters.',
+  },
+  lyon: {
+    name: 'Lyon',
+    country: 'France',
+    latitude: 45.7640,
+    longitude: 4.8357,
+    cityCode: 'LYS',
+    popularAirports: ['Lyon–Saint-Exupéry (LYS)'],
+    mainTrainStation: 'Lyon-Part-Dieu',
+    defaultDescription: 'Gastronomic capital of France traversed by the Rhône and Saône rivers with historic traboules.',
+  },
+  marseille: {
+    name: 'Marseille',
+    country: 'France',
+    latitude: 43.2965,
+    longitude: 5.3698,
+    cityCode: 'MRS',
+    popularAirports: ['Marseille Provence (MRS)'],
+    mainTrainStation: 'Marseille Saint-Charles',
+    defaultDescription: 'Ancient Mediterranean port city famous for the vibrant Old Port and spectacular Calanques.',
+  },
+  bordeaux: {
+    name: 'Bordeaux',
+    country: 'France',
+    latitude: 44.8378,
+    longitude: -0.5792,
+    cityCode: 'BOD',
+    popularAirports: ['Bordeaux–Mérignac (BOD)'],
+    mainTrainStation: 'Bordeaux Saint-Jean',
+    defaultDescription: 'Global wine capital surrounded by prestigious vineyards, grand plazas, and neoclassical facades.',
+  },
+  strasbourg: {
+    name: 'Strasbourg',
+    country: 'France',
+    latitude: 48.5734,
+    longitude: 7.7521,
+    cityCode: 'SXB',
+    popularAirports: ['Strasbourg Airport (SXB)'],
+    mainTrainStation: 'Strasbourg-Ville',
+    defaultDescription: 'Alsatian capital on the Rhine border, famed for half-timbered houses and soaring Gothic cathedral.',
+  },
+  // Spain
+  valencia: {
+    name: 'Valencia',
+    country: 'Spain',
+    latitude: 39.4699,
+    longitude: -0.3763,
+    cityCode: 'VLC',
+    popularAirports: ['Valencia Airport (VLC)'],
+    mainTrainStation: 'Valencia Joaquín Sorolla',
+    defaultDescription: 'Sun-soaked home of authentic paella, Mediterranean beaches, and the City of Arts and Sciences.',
+  },
+  bilbao: {
+    name: 'Bilbao',
+    country: 'Spain',
+    latitude: 43.2630,
+    longitude: -2.9350,
+    cityCode: 'BIO',
+    popularAirports: ['Bilbao Airport (BIO)'],
+    mainTrainStation: 'Bilbao-Abando',
+    defaultDescription: 'Basque cultural powerhouse home to the titanium-clad Guggenheim Museum and gourmet pintxos.',
+  },
+  san_sebastian: {
+    name: 'San Sebastian',
+    country: 'Spain',
+    latitude: 43.3183,
+    longitude: -1.9812,
+    cityCode: 'EAS',
+    popularAirports: ['San Sebastián Airport (EAS)', 'Biarritz (BIQ)'],
+    mainTrainStation: 'Donostia-San Sebastián',
+    defaultDescription: 'World-renowned culinary jewel with crescent-shaped La Concha bay and bustling Old Town taverns.',
+  },
+  malaga: {
+    name: 'Malaga',
+    country: 'Spain',
+    latitude: 36.7213,
+    longitude: -4.4214,
+    cityCode: 'AGP',
+    popularAirports: ['Málaga-Costa del Sol (AGP)'],
+    mainTrainStation: 'Málaga María Zambrano',
+    defaultDescription: 'Andalusian coastal capital and birthplace of Picasso, with hilltop Alcazaba and beach promenades.',
+  },
+  // Italy
+  naples: {
+    name: 'Naples',
+    country: 'Italy',
+    latitude: 40.8518,
+    longitude: 14.2681,
+    cityCode: 'NAP',
+    popularAirports: ['Naples International (NAP)'],
+    mainTrainStation: 'Napoli Centrale',
+    defaultDescription: 'Birthplace of authentic Neapolitan pizza, gateway to Pompeii, Mount Vesuvius, and the Amalfi Coast.',
+  },
+  bologna: {
+    name: 'Bologna',
+    country: 'Italy',
+    latitude: 44.4949,
+    longitude: 11.3426,
+    cityCode: 'BLQ',
+    popularAirports: ['Bologna Guglielmo Marconi (BLQ)'],
+    mainTrainStation: 'Bologna Centrale',
+    defaultDescription: 'Culinary heart of Italy boasting medieval covered porticoes, leaning towers, and world-class pasta.',
+  },
+  // Germany & Central Europe
+  frankfurt: {
+    name: 'Frankfurt',
+    country: 'Germany',
+    latitude: 50.1109,
+    longitude: 8.6821,
+    cityCode: 'FRA',
+    popularAirports: ['Frankfurt Airport (FRA)'],
+    mainTrainStation: 'Frankfurt (Main) Hauptbahnhof',
+    defaultDescription: 'Major central European railway and financial crossroads on the Main River with historic Römerberg.',
+  },
+  cologne: {
+    name: 'Cologne',
+    country: 'Germany',
+    latitude: 50.9375,
+    longitude: 6.9603,
+    cityCode: 'CGN',
+    popularAirports: ['Cologne Bonn Airport (CGN)'],
+    mainTrainStation: 'Köln Hauptbahnhof',
+    defaultDescription: 'Historic Rhineland metropolis dominated by its twin-spire UNESCO Gothic Cathedral beside the river.',
+  },
+  salzburg: {
+    name: 'Salzburg',
+    country: 'Austria',
+    latitude: 47.8095,
+    longitude: 13.0550,
+    cityCode: 'SZG',
+    popularAirports: ['Salzburg Airport (SZG)', 'Munich Airport (MUC)'],
+    mainTrainStation: 'Salzburg Hauptbahnhof',
+    defaultDescription: 'Mozart’s picturesque baroque birthplace crowned by the cliffside Hohensalzburg Fortress.',
+  },
+  geneva: {
+    name: 'Geneva',
+    country: 'Switzerland',
+    latitude: 46.2044,
+    longitude: 6.1432,
+    cityCode: 'GVA',
+    popularAirports: ['Geneva Airport (GVA)'],
+    mainTrainStation: 'Genève Cornavin',
+    defaultDescription: 'Scenic diplomatic and banking capital set beside Lake Geneva with panoramic alpine vistas.',
+  },
+  rotterdam: {
+    name: 'Rotterdam',
+    country: 'Netherlands',
+    latitude: 51.9244,
+    longitude: 4.4777,
+    cityCode: 'RTM',
+    popularAirports: ['Rotterdam The Hague Airport (RTM)', 'Amsterdam Schiphol (AMS)'],
+    mainTrainStation: 'Rotterdam Centraal',
+    defaultDescription: 'Bold architectural laboratory featuring futuristic skyline, cubic houses, and Europe’s largest port.',
+  },
+  edinburgh: {
+    name: 'Edinburgh',
+    country: 'United Kingdom',
+    latitude: 55.9533,
+    longitude: -3.1883,
+    cityCode: 'EDI',
+    popularAirports: ['Edinburgh Airport (EDI)'],
+    mainTrainStation: 'Edinburgh Waverley',
+    defaultDescription: 'Atmospheric Scottish capital with dramatic volcanic crags, medieval Royal Mile, and Edinburgh Castle.',
+  },
+  dublin: {
+    name: 'Dublin',
+    country: 'Ireland',
+    latitude: 53.3498,
+    longitude: -6.2603,
+    cityCode: 'DUB',
+    popularAirports: ['Dublin Airport (DUB)'],
+    mainTrainStation: 'Dublin Heuston / Connolly',
+    defaultDescription: 'Warm, literary Irish capital famed for Trinity College, Georgian brick squares, and Temple Bar music.',
+  },
+};
+
+/**
+ * Calculates great-circle distance between two points in kilometers using Haversine formula
+ */
+export function calculateDistanceKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
+export const SPANISH_CITY_ALIASES: Record<string, string> = {
+  brujas: 'bruges',
+  bruselas: 'brussels',
+  gante: 'ghent',
+  amberes: 'antwerp',
+  niza: 'nice',
+  burdeos: 'bordeaux',
+  estrasburgo: 'strasbourg',
+  marsella: 'marseille',
+  venecia: 'venice',
+  milan: 'milan',
+  napoles: 'naples',
+  bolonia: 'bologna',
+  francfort: 'frankfurt',
+  colonia: 'cologne',
+  salzburgo: 'salzburg',
+  ginebra: 'geneva',
+  roterdam: 'rotterdam',
+  edimburgo: 'edinburgh',
+  lisboa: 'lisbon',
+  florencia: 'florence',
+  viena: 'vienna',
+  praga: 'prague',
+  berlin: 'berlin',
+  amsterdam: 'amsterdam',
+  londres: 'london',
+  paris: 'paris',
+  munich: 'munich',
+  oporto: 'porto',
+  sevilla: 'seville',
+  atenas: 'athens',
+  nuevayork: 'new_york',
+  tokio: 'tokyo',
+  kioto: 'kyoto',
+  croacia: 'dubrovnik',
+};
+
+/**
+ * Maps country names to their primary travel gateway city and country name
+ */
+export const COUNTRY_HUBS: Record<string, { cityKey: string; countryName: string }> = {
+  belgica: { cityKey: 'brussels', countryName: 'Belgium' },
+  belgium: { cityKey: 'brussels', countryName: 'Belgium' },
+  holanda: { cityKey: 'amsterdam', countryName: 'Netherlands' },
+  paisesbajos: { cityKey: 'amsterdam', countryName: 'Netherlands' },
+  netherlands: { cityKey: 'amsterdam', countryName: 'Netherlands' },
+  suiza: { cityKey: 'zurich', countryName: 'Switzerland' },
+  switzerland: { cityKey: 'zurich', countryName: 'Switzerland' },
+  croacia: { cityKey: 'dubrovnik', countryName: 'Croatia' },
+  croatia: { cityKey: 'dubrovnik', countryName: 'Croatia' },
+  espana: { cityKey: 'madrid', countryName: 'Spain' },
+  spain: { cityKey: 'madrid', countryName: 'Spain' },
+  francia: { cityKey: 'paris', countryName: 'France' },
+  france: { cityKey: 'paris', countryName: 'France' },
+  italia: { cityKey: 'rome', countryName: 'Italy' },
+  italy: { cityKey: 'rome', countryName: 'Italy' },
+  alemania: { cityKey: 'berlin', countryName: 'Germany' },
+  germany: { cityKey: 'berlin', countryName: 'Germany' },
+  portugal: { cityKey: 'lisbon', countryName: 'Portugal' },
+  reunounido: { cityKey: 'london', countryName: 'United Kingdom' },
+  unitedkingdom: { cityKey: 'london', countryName: 'United Kingdom' },
+  inglaterra: { cityKey: 'london', countryName: 'United Kingdom' },
+  england: { cityKey: 'london', countryName: 'United Kingdom' },
+  escocia: { cityKey: 'edinburgh', countryName: 'United Kingdom' },
+  scotland: { cityKey: 'edinburgh', countryName: 'United Kingdom' },
+  irlanda: { cityKey: 'dublin', countryName: 'Ireland' },
+  ireland: { cityKey: 'dublin', countryName: 'Ireland' },
+  austria: { cityKey: 'vienna', countryName: 'Austria' },
+  republicacheca: { cityKey: 'prague', countryName: 'Czech Republic' },
+  czechrepublic: { cityKey: 'prague', countryName: 'Czech Republic' },
+  hungria: { cityKey: 'budapest', countryName: 'Hungary' },
+  hungary: { cityKey: 'budapest', countryName: 'Hungary' },
+  grecia: { cityKey: 'athens', countryName: 'Greece' },
+  greece: { cityKey: 'athens', countryName: 'Greece' },
+  japon: { cityKey: 'tokyo', countryName: 'Japan' },
+  japan: { cityKey: 'tokyo', countryName: 'Japan' },
+};
+
+/**
+ * Resolves a city name to Location with coordinates.
+ * Looks up local database first, checks aliases and country mappings,
+ * and falls back to a 100% deterministic coordinate without Math.random.
+ */
+export function resolveLocation(cityName: string, country?: string): Location {
+  const trimmed = cityName.trim();
+  const normalized = trimmed
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  const cleanKey = normalized.replace(/[^a-z]/g, '');
+  const aliasKey = SPANISH_CITY_ALIASES[cleanKey] || cleanKey;
+
+  // 1. Direct match on CITY_HUBS key (alias or clean)
+  if (CITY_HUBS[aliasKey]) {
+    const hub = CITY_HUBS[aliasKey];
+    return {
+      name: hub.name,
+      country: hub.country,
+      latitude: hub.latitude,
+      longitude: hub.longitude,
+      cityCode: hub.cityCode,
+    };
+  }
+
+  if (CITY_HUBS[cleanKey]) {
+    const hub = CITY_HUBS[cleanKey];
+    return {
+      name: hub.name,
+      country: hub.country,
+      latitude: hub.latitude,
+      longitude: hub.longitude,
+      cityCode: hub.cityCode,
+    };
+  }
+
+  // 2. Direct match on country name (e.g. "Bélgica" -> Brussels, Belgium)
+  if (COUNTRY_HUBS[cleanKey]) {
+    const cMap = COUNTRY_HUBS[cleanKey];
+    const hub = CITY_HUBS[cMap.cityKey];
+    if (hub) {
+      return {
+        name: hub.name,
+        country: cMap.countryName,
+        latitude: hub.latitude,
+        longitude: hub.longitude,
+        cityCode: hub.cityCode,
+      };
+    }
+  }
+
+  // 3. Exact match against official hub.name
+  for (const hub of Object.values(CITY_HUBS)) {
+    const hNorm = hub.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (hNorm === normalized || hub.name.toLowerCase() === trimmed.toLowerCase()) {
+      return {
+        name: hub.name,
+        country: hub.country,
+        latitude: hub.latitude,
+        longitude: hub.longitude,
+        cityCode: hub.cityCode,
+      };
+    }
+  }
+
+  // 4. Safe substring match for longer city names (min 4 chars to prevent false matches)
+  if (cleanKey.length >= 4) {
+    for (const hub of Object.values(CITY_HUBS)) {
+      const hNorm = hub.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const hClean = hNorm.replace(/[^a-z]/g, '');
+      if (hClean === cleanKey || (cleanKey.length >= 5 && hClean.startsWith(cleanKey))) {
+        return {
+          name: hub.name,
+          country: hub.country,
+          latitude: hub.latitude,
+          longitude: hub.longitude,
+          cityCode: hub.cityCode,
+        };
+      }
+    }
+  }
+
+  // 5. Deterministic fallback (ZERO Math.random!)
+  // Computes a stable hash coordinate so the same city always renders in the exact same spot
+  let hash = 0;
+  for (let i = 0; i < trimmed.length; i++) {
+    hash = (hash << 5) - hash + trimmed.charCodeAt(i);
+    hash |= 0;
+  }
+  const deterministicLatOffset = ((Math.abs(hash) % 1000) / 1000 - 0.5) * 4;
+  const deterministicLonOffset = ((Math.abs(hash >> 3) % 1000) / 1000 - 0.5) * 6;
+
+  return {
+    name: trimmed,
+    country: country || 'Europe',
+    latitude: +(48.5 + deterministicLatOffset).toFixed(4),
+    longitude: +(9.5 + deterministicLonOffset).toFixed(4),
+  };
+}
+
+/**
+ * Recommends optimal transport mode and duration based on distance and preferences
+ */
+export function estimateTransportation(
+  from: Location,
+  to: Location,
+  preferTrain = true
+): { mode: TransportMode; durationMinutes: number; distanceKm: number; description: string } {
+  if (!from.latitude || !from.longitude || !to.latitude || !to.longitude) {
+    return {
+      mode: 'train',
+      durationMinutes: 180,
+      distanceKm: 300,
+      description: 'Estimated rail transit',
+    };
+  }
+
+  const dist = calculateDistanceKm(from.latitude, from.longitude, to.latitude, to.longitude);
+
+  // Sea crossing / island check
+  const isIslandOrWaterHop =
+    (from.name === 'Athens' && to.name === 'Rome') ||
+    (from.name === 'London' && to.name === 'Lisbon');
+
+  if (dist > 750 || (dist > 500 && !preferTrain) || isIslandOrWaterHop) {
+    // Flight
+    // Flight time: approx 45m taxi/takeoff/landing + dist / 750kmh
+    const airTime = Math.round(45 + (dist / 750) * 60);
+    return {
+      mode: 'flight',
+      durationMinutes: airTime,
+      distanceKm: dist,
+      description: `Direct or short-hop flight (~${Math.floor(airTime / 60)}h ${airTime % 60}m)`,
+    };
+  } else if (dist <= 120) {
+    // Short train or regional bus/car
+    const trainTime = Math.round(20 + (dist / 120) * 60);
+    return {
+      mode: 'train',
+      durationMinutes: trainTime,
+      distanceKm: dist,
+      description: `Regional high-speed train (~${Math.floor(trainTime / 60)}h ${trainTime % 60}m)`,
+    };
+  } else {
+    // Medium-distance train (European High-Speed Rail e.g. TGV, ICE, Frecciarossa, AVE, Railjet)
+    const trainTime = Math.round(30 + (dist / 150) * 60);
+    return {
+      mode: 'train',
+      durationMinutes: trainTime,
+      distanceKm: dist,
+      description: `Express intercity / high-speed rail (~${Math.floor(trainTime / 60)}h ${trainTime % 60}m)`,
+    };
+  }
+}
