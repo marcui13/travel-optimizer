@@ -20,6 +20,7 @@ export interface Translations {
   };
   header: {
     title: string;
+    tagline: string;
     version: string;
     plannerSplit: string;
     mapFocus: string;

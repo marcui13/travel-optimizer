@@ -119,9 +119,14 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
             <Sparkles className="w-4 h-4 text-emerald-400" />
           </div>
           <div>
-            <h3 className="font-semibold text-slate-100 text-xs tracking-wide">
-              {t.assistant.intelligenceTitle}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-slate-100 text-xs tracking-wide">
+                {t.assistant.intelligenceTitle}
+              </h3>
+              <span className="text-[10px] text-emerald-400/80 font-medium italic hidden sm:inline">
+                “Trust the Detour”
+              </span>
+            </div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="text-[10px] text-emerald-400 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>

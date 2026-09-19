@@ -67,6 +67,10 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="px-1.5 py-0.2 text-[10px] font-mono rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60">
                 {t.header.version}
               </span>
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium tracking-wide rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-800/50 shadow-sm shadow-emerald-950/40">
+                <span className="w-1 h-1 rounded-full bg-emerald-400"></span>
+                “{t.header.tagline}”
+              </span>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-slate-400">
               <span className="font-medium text-slate-300 max-w-[180px] sm:max-w-xs truncate">

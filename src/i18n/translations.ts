@@ -20,6 +20,7 @@ export const enTranslations: Translations = {
   },
   header: {
     title: 'Travel Optimizer',
+    tagline: 'Trust the Detour',
     version: 'v1.0 MVP',
     plannerSplit: 'Planner Split',
     mapFocus: 'Map Focus',
@@ -294,6 +295,7 @@ export const esTranslations: Translations = {
   },
   header: {
     title: 'Travel Optimizer',
+    tagline: 'Trust the Detour',
     version: 'v1.0 MVP',
     plannerSplit: 'Planificador',
     mapFocus: 'Enfoque Mapa',
