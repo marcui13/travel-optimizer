@@ -6,6 +6,15 @@ Travel Optimizer transforms messy travel information, destinations, dates, reser
 
 ---
 
+### 👨‍💻 Autoría & Desarrollo Agéntico
+Este proyecto fue conceptualizado y desarrollado por **[Agustin Marquardt](https://github.com/marcui13)** utilizando **Antigravity** como entorno de desarrollo y asistente de inteligencia artificial, aplicando **buenas prácticas de desarrollo de código agéntico**:
+- **Plan-Driven & Spec-Driven Development**: Creación, análisis de impacto y aprobación estructurada de planes técnicos (`implementation_plan.md`) previo a la ejecución de cada cambio.
+- **Arquitectura de Dominio Aislada**: Más del 70% del código reside en capas de dominio y servicios puros en TypeScript (`src/domain/`, `src/services/`), completamente desacoplado del DOM y listo para reutilización multiplataforma (Web y React Native).
+- **Verificación Continua & Test-Driven**: Suite automatizada de 91 pruebas unitarias con Vitest y verificación estricta de compilación con TypeScript en cada ciclo de trabajo.
+- **Human-in-the-Loop & Control de Calidad**: Aprobación humana explícita antes de despliegues y commits, con trazabilidad documentada en bitácoras de auditoría (`walkthrough.md`).
+
+---
+
 ## 🌟 Key Architecture & Principles
 
 ### The Itinerary is the Primary Artifact
@@ -160,3 +169,12 @@ src/
 │
 └── App.tsx                  # Root reactive coordinator with Undo/Redo & LocalStorage persistence
 ```
+
+---
+
+## 👨‍💻 Autor & Créditos
+
+* **Desarrollador**: [Agustin Marquardt](https://github.com/marcui13)
+* **Entorno de Desarrollo & Asistente IA**: **Antigravity** (Google DeepMind)
+* **Filosofía**: *"Trust the Detour"* — Herramienta editorial de expedición y logística de viajes real, diseñada para humanos.
+
