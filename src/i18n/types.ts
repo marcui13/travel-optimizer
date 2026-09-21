@@ -29,6 +29,7 @@ export interface Translations {
     assistant: string;
     europeDemo: string;
     ingestDocuments: string;
+    importTripJson: string;
     newTrip: string;
     tripHistory: string;
     resetTrip: string;
@@ -76,6 +77,7 @@ export interface Translations {
     activitiesShort: string;
     noDaysTitle: string;
     noDaysDesc: string;
+    exportGoogleCalendar: string;
   };
   constraints: {
     travelPreferences: string;
@@ -251,6 +253,7 @@ export interface Translations {
       confirmDelete: string;
       saveCurrentAsNew: string;
       createNewTrip: string;
+      importTripFile: string;
       noTripsFound: string;
       totalTrips: string;
       citiesCount: string;
@@ -259,6 +262,37 @@ export interface Translations {
       completedTitle: string;
       activeTitle: string;
       plannedTitle: string;
+    };
+    importTrip: {
+      buttonLabel: string;
+      buttonTooltip: string;
+      dropOverlayTitle: string;
+      dropOverlaySubtitle: string;
+      badgeFile: string;
+      saveSuccessToast: string;
+      errorInvalidJson: string;
+      errorMissingFields: string;
+    };
+    exportCalendar: {
+      title: string;
+      subtitle: string;
+      tabSyncIcs: string;
+      tabDirectLinks: string;
+      recommendedTitle: string;
+      recommendedDesc: string;
+      downloadIcsButton: string;
+      openGCalImportButton: string;
+      step1: string;
+      step2: string;
+      step3: string;
+      compatibilityNote: string;
+      directLinksTitle: string;
+      directLinksDesc: string;
+      masterTripTitle: string;
+      destinationsTitle: string;
+      transitTitle: string;
+      addToGoogleCalendar: string;
+      openWebLink: string;
     };
     resetModal: {
       title: string;
@@ -294,5 +328,12 @@ export interface Translations {
       viewHistory: string;
       dismissAction: string;
     };
+  };
+  footer: {
+    developedBy: string;
+    authorName: string;
+    githubLabel: string;
+    linkedinLabel: string;
+    tagline: string;
   };
 }

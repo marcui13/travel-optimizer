@@ -6,6 +6,7 @@ import {
   decodeTripFromShareUrl,
   generateTripSummaryText,
   parseTripImportJson,
+  validateAndSanitizeTripJson,
   DEPLOYED_VERCEL_URL,
   getShareBaseUrl,
 } from '../shareService';
@@ -97,7 +98,7 @@ describe('Trip Sharing Service (shareService)', () => {
     });
   });
 
-  describe('JSON File Export & Import Parsing', () => {
+  describe('JSON File Export & Import Parsing and Sanitization', () => {
     it('successfully parses valid exported JSON back into a Trip object', () => {
       const serialized = JSON.stringify(sampleTrip, null, 2);
       const parsed = parseTripImportJson(serialized);
@@ -110,5 +111,69 @@ describe('Trip Sharing Service (shareService)', () => {
       expect(parseTripImportJson('invalid json')).toBeNull();
       expect(parseTripImportJson(JSON.stringify({ foo: 'bar' }))).toBeNull();
     });
+
+    it('validates and sanitizes a complete trip successfully', () => {
+      const serialized = JSON.stringify(sampleTrip);
+      const result = validateAndSanitizeTripJson(serialized);
+      expect(result.success).toBe(true);
+      expect(result.trip).toBeDefined();
+      expect(result.trip?.name).toBe(sampleTrip.name);
+      expect(result.trip?.destinations.length).toBe(sampleTrip.destinations.length);
+    });
+
+    it('unwraps nested trip object if payload is wrapped in { trip: ... }', () => {
+      const wrapped = JSON.stringify({ trip: sampleTrip });
+      const result = validateAndSanitizeTripJson(wrapped);
+      expect(result.success).toBe(true);
+      expect(result.trip?.name).toBe(sampleTrip.name);
+    });
+
+    it('returns a clear error when string is empty or invalid JSON', () => {
+      const emptyResult = validateAndSanitizeTripJson('');
+      expect(emptyResult.success).toBe(false);
+      expect(emptyResult.error).toContain('vacío');
+
+      const malformedResult = validateAndSanitizeTripJson('{ invalid json: ');
+      expect(malformedResult.success).toBe(false);
+      expect(malformedResult.error).toContain('JSON válido');
+    });
+
+    it('rejects payloads missing essential trip properties (name or destinations)', () => {
+      const missingName = JSON.stringify({ destinations: [{ name: 'Paris', location: { lat: 48, lng: 2 } }] });
+      const res1 = validateAndSanitizeTripJson(missingName);
+      expect(res1.success).toBe(false);
+      expect(res1.error).toContain('nombre válido');
+
+      const missingDests = JSON.stringify({ name: 'Solo Nombre', destinations: [] });
+      const res2 = validateAndSanitizeTripJson(missingDests);
+      expect(res2.success).toBe(false);
+      expect(res2.error).toContain('al menos un destino');
+    });
+
+    it('sanitizes incomplete destination coordinates and missing sub-arrays with sensible fallbacks', () => {
+      const rawTrip = {
+        name: 'Viaje Ligero',
+        destinations: [
+          { name: 'Roma' }, // missing id, location, targetDurationDays
+        ],
+      };
+      const result = validateAndSanitizeTripJson(JSON.stringify(rawTrip));
+      expect(result.success).toBe(true);
+      expect(result.trip?.destinations[0].id).toBe('dest-1');
+      expect(result.trip?.destinations[0].location.latitude).toBeDefined();
+      expect(result.trip?.destinations[0].location.longitude).toBeDefined();
+      expect(result.trip?.events).toEqual([]);
+      expect(result.trip?.reservations).toEqual([]);
+      expect(result.trip?.transportation).toEqual([]);
+      expect(result.trip?.itinerary.days.length).toBe(1);
+    });
+
+    it('blocks prototype pollution payload attempts', () => {
+      const malicious = '{"__proto__": {"admin": true}, "name": "Hack", "destinations": [{"name": "A"}]}';
+      const result = validateAndSanitizeTripJson(malicious);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('insegura');
+    });
   });
 });
+
