@@ -150,6 +150,12 @@ export const MobileTripProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
+  useEffect(() => {
+    storage.hydrateStorageAsync().then(() => {
+      reloadFromStorage();
+    });
+  }, [reloadFromStorage]);
+
   return (
     <MobileTripContext.Provider
       value={{

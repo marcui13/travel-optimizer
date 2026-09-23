@@ -1,25 +1,73 @@
 import { Trip } from '@domain/types';
 import { getDefaultTripLibrary } from '@domain/tripDefaults';
 import { tripStorage, StorageDriver } from '@services/storage/tripStorageService';
-import { createMMKV } from 'react-native-mmkv';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 export const STORAGE_KEY_MOBILE_LANG = 'travel_optimizer_lang';
 
 const memoryStore = new Map<string, string>();
 
 let mmkvInstance: any = null;
-try {
-  mmkvInstance = createMMKV({ id: 'travel-optimizer-storage' });
-} catch (e) {
-  // MMKV native module is not available in web preview or testing environments.
-  // Fallbacks below ensure 100% reliability across all targets.
+
+// Expo Go does not support custom C++ TurboModules (NitroModules/MMKV v4).
+// Avoid loading MMKV in Expo Go to prevent NativeNitroModules runtime crash.
+const isExpoGo =
+  Constants.appOwnership === 'expo' ||
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+if (!isExpoGo && typeof window === 'undefined') {
+  try {
+    // Dynamic require so Expo Go never evaluates the native NitroModules C++ binding
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mmkvModule = require('react-native-mmkv');
+    if (mmkvModule && typeof mmkvModule.createMMKV === 'function') {
+      mmkvInstance = mmkvModule.createMMKV({ id: 'travel-optimizer-storage' });
+    }
+  } catch {
+    // Graceful fallback to AsyncStorage in Expo Go
+  }
 }
 
 /**
+ * Asynchronously hydrates the in-memory store from AsyncStorage on startup.
+ * In Expo Go, this ensures trips saved in previous sessions are hydrated.
+ */
+let hydrationPromise: Promise<void> | null = null;
+
+export function hydrateStorageAsync(): Promise<void> {
+  if (hydrationPromise) return hydrationPromise;
+
+  hydrationPromise = (async () => {
+    if (mmkvInstance || (typeof window !== 'undefined' && window.localStorage)) {
+      return;
+    }
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      if (keys && keys.length > 0) {
+        const pairs = await AsyncStorage.multiGet(keys);
+        pairs.forEach(([key, val]) => {
+          if (val !== null) {
+            memoryStore.set(key, val);
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('[mobileStorage] Hydration warning:', err);
+    }
+  })();
+
+  return hydrationPromise;
+}
+
+// Trigger initial background hydration
+hydrateStorageAsync().catch(() => {});
+
+/**
  * High-performance mobile storage driver with tiered fallbacks:
- * 1. MMKV (Native iOS/Android - C++ synchronous engine)
+ * 1. MMKV (Native standalone/dev builds - C++ synchronous engine)
  * 2. Window.localStorage (Web preview / Expo Web)
- * 3. In-memory Map (Test / Headless fallback)
+ * 3. Write-through In-Memory Store backed by AsyncStorage (Expo Go / Test fallback)
  */
 export const mobileStorageDriver: StorageDriver = {
   getItem: (key: string): string | null => {
@@ -50,6 +98,8 @@ export const mobileStorageDriver: StorageDriver = {
       // ignore
     }
     memoryStore.set(key, value);
+    // Write-through to AsyncStorage for Expo Go
+    Promise.resolve(AsyncStorage.setItem(key, value)).catch(() => {});
   },
 
   removeItem: (key: string): void => {
@@ -66,6 +116,7 @@ export const mobileStorageDriver: StorageDriver = {
       // ignore
     }
     memoryStore.delete(key);
+    Promise.resolve(AsyncStorage.removeItem(key)).catch(() => {});
   },
 
   clear: (): void => {
@@ -82,6 +133,7 @@ export const mobileStorageDriver: StorageDriver = {
       // ignore
     }
     memoryStore.clear();
+    Promise.resolve(AsyncStorage.clear()).catch(() => {});
   },
 };
 

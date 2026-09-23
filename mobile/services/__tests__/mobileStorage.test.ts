@@ -4,6 +4,29 @@ vi.mock('react-native-mmkv', () => ({
   createMMKV: () => null,
 }));
 
+vi.mock('@react-native-async-storage/async-storage', () => ({
+  default: {
+    getItem: vi.fn(),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    clear: vi.fn(),
+    getAllKeys: vi.fn(async () => []),
+    multiGet: vi.fn(async () => []),
+  },
+}));
+
+vi.mock('expo-constants', () => ({
+  default: {
+    appOwnership: 'expo',
+    executionEnvironment: 'storeClient',
+  },
+  ExecutionEnvironment: {
+    StoreClient: 'storeClient',
+    Bare: 'bare',
+    Standalone: 'standalone',
+  },
+}));
+
 import * as storage from '../mobileStorage';
 
 describe('mobileStorage Service', () => {
