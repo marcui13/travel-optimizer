@@ -80,7 +80,10 @@ export default function MapTabScreen() {
         />
 
         {/* Floating Quick Action Overlay Buttons */}
-        <View className="absolute top-3 left-4 right-4 flex-row items-center justify-between pointer-events-box-none">
+        <View
+          className="absolute top-3 left-4 right-4 flex-row items-center justify-between"
+          style={{ pointerEvents: 'box-none' }}
+        >
           <View className="flex-row items-center space-x-1.5 bg-slate-950/80 border border-slate-800/90 px-3 py-1.5 rounded-full shadow-lg">
             <MapPin color="#10b981" size={13} />
             <Text className="text-xs font-bold text-white">

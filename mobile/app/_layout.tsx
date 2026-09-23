@@ -4,8 +4,13 @@ import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { Platform } from 'react-native';
 import { MobileI18nProvider } from '../context/MobileI18nContext';
 import { MobileTripProvider } from '../context/MobileTripContext';
+
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  document.documentElement.classList.add('dark');
+}
 
 export default function RootLayout() {
   return (
