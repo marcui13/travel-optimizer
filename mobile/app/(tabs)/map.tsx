@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import MapView from 'react-native-maps';
+import type MapView from 'react-native-maps';
 import { Maximize2, MapPin } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useMobileTrip } from '../../context/MobileTripContext';
