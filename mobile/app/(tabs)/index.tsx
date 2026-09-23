@@ -52,9 +52,13 @@ export default function ItineraryTabScreen() {
     <View className="flex-1 bg-slate-950">
       <MobileHeader />
 
-      <ScrollView className="flex-1 px-4 pt-3 pb-16" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1 px-4 pt-3.5"
+        contentContainerStyle={{ paddingBottom: 110 }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Active Trip Overview Card */}
-        <View className="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-3.5 shadow-xl">
+        <View className="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-4 shadow-xl">
           <View className="flex-row items-center justify-between mb-2">
             <View className="flex-row items-center space-x-1.5">
               <View className="w-2 h-2 rounded-full bg-brand-400" />

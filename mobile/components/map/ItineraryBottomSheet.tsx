@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import BottomSheet, { BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet';
+import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import {
   MapPin,
   Clock,
@@ -84,9 +84,13 @@ export const ItineraryBottomSheet: React.FC<ItineraryBottomSheetProps> = ({
       backgroundStyle={{ backgroundColor: '#0f172a', borderTopWidth: 1, borderColor: '#1e293b' }}
       handleIndicatorStyle={{ backgroundColor: '#475569', width: 36, height: 4 }}
     >
-      <BottomSheetView className="px-4 pb-2">
+      <BottomSheetScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 80 }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Peek Header */}
-        <View className="flex-row items-center justify-between py-1">
+        <View className="flex-row items-center justify-between pb-3 border-b border-slate-800/80 mb-3.5">
           <View className="flex-row items-center space-x-2">
             <View className="w-2.5 h-2.5 rounded-full bg-brand-400" />
             <Text className="text-sm font-bold text-white">
@@ -109,12 +113,6 @@ export const ItineraryBottomSheet: React.FC<ItineraryBottomSheetProps> = ({
             </Text>
           </TouchableOpacity>
         </View>
-      </BottomSheetView>
-
-      <BottomSheetScrollView
-        className="flex-1 px-4 pt-1"
-        showsVerticalScrollIndicator={false}
-      >
         {/* Selected Destination Feature Card (if any) */}
         {selectedDestination && (
           <View className="bg-slate-950/80 border border-brand-500/40 rounded-2xl p-3.5 mb-4 shadow-md">

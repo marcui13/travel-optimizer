@@ -22,11 +22,11 @@ export const MetricsManifest: React.FC<MetricsManifestProps> = ({ trip }) => {
   const stats = calculateTripStatistics(trip);
 
   return (
-    <View className="bg-slate-900/90 border border-slate-800 rounded-2xl p-2.5 mb-4 shadow-sm">
+    <View className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 mb-4 shadow-sm">
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 4 }}
+        contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 6 }}
       >
         {/* 1. Destinations / Cities */}
         <View className="flex-row items-center space-x-1.5 mr-3">

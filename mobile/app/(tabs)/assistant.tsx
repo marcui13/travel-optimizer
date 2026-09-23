@@ -182,7 +182,7 @@ export default function AssistantTabScreen() {
     >
       <MobileHeader />
 
-      <View className="flex-1 px-4 pt-2">
+      <View className="flex-1 px-4 pt-3">
         {/* Quick Heuristic Profiles Bar */}
         <ProfileOptimizerBar
           onSelectProfile={handleSelectProfile}
@@ -194,7 +194,7 @@ export default function AssistantTabScreen() {
           ref={scrollViewRef}
           className="flex-1"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 16 }}
+          contentContainerStyle={{ paddingBottom: 24, paddingTop: 4 }}
         >
           {messages.map((message) => (
             <ChatMessageBubble
@@ -215,7 +215,7 @@ export default function AssistantTabScreen() {
         </ScrollView>
 
         {/* Quick Suggestion Chips */}
-        <View className="py-2">
+        <View className="py-2.5">
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -227,7 +227,7 @@ export default function AssistantTabScreen() {
                 disabled={isProcessing}
                 onPress={() => handleSendMessage(chip)}
                 activeOpacity={0.7}
-                className="mr-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 active:border-brand-500/60"
+                className="mr-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 active:border-brand-500/60"
               >
                 <Text className="text-xs font-medium text-slate-300">
                   {chip}
@@ -238,7 +238,7 @@ export default function AssistantTabScreen() {
         </View>
 
         {/* Input Bar */}
-        <View className="bg-slate-900 border border-slate-800 rounded-2xl p-2 flex-row items-center space-x-2 mb-3 shadow-xl">
+        <View className="bg-slate-900 border border-slate-800 rounded-2xl p-2.5 flex-row items-center space-x-2 mb-3.5 shadow-xl">
           <TextInput
             value={inputText}
             onChangeText={setInputText}

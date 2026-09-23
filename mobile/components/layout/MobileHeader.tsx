@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Share } from 'react-native';
-import { Compass, Globe, History, PlusCircle, Share2 } from 'lucide-react-native';
+import { Compass, Globe, History, Share2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useMobileTrip } from '../../context/MobileTripContext';
 import { useMobileI18n } from '../../context/MobileI18nContext';
@@ -14,6 +15,7 @@ interface MobileHeaderProps {
 
 export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, subtitle }) => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { trip, savedTrips } = useMobileTrip();
   const { lang, setLang } = useMobileI18n();
 
@@ -23,10 +25,6 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, subtitle }) =
 
   const handleOpenHistory = () => {
     router.push('/modal/history');
-  };
-
-  const handleOpenCreate = () => {
-    router.push('/modal/create');
   };
 
   const handleShare = async () => {
@@ -45,32 +43,36 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, subtitle }) =
     }
   };
 
-  const displayTitle = title || trip?.name || 'Travel Optimizer';
-  const displaySubtitle = subtitle || (trip ? `${trip.startDate} → ${trip.endDate}` : undefined);
+  const displayTitle = title || 'Travel Optimizer';
+  const displaySubtitle = subtitle || (trip ? `${trip.name}` : undefined);
+  const topPadding = Math.max(insets.top, 16) + 4;
 
   return (
-    <View className="bg-slate-950/95 border-b border-slate-800/80 px-4 pt-12 pb-3.5">
+    <View
+      className="bg-slate-950 border-b border-slate-850 px-4 pb-3"
+      style={{ paddingTop: topPadding }}
+    >
       <View className="flex-row items-center justify-between">
         {/* App & Trip Info */}
-        <View className="flex-1 mr-2 flex-row items-center space-x-2.5">
-          <View className="w-9 h-9 rounded-xl bg-brand-500/20 items-center justify-center border border-brand-500/30">
-            <Compass color="#10b981" size={20} />
+        <View className="flex-1 mr-3 flex-row items-center space-x-2.5">
+          <View className="w-8 h-8 rounded-xl bg-brand-500/15 items-center justify-center border border-brand-500/30">
+            <Compass color="#10b981" size={18} />
           </View>
           <View className="flex-1">
-            <View className="flex-row items-center space-x-2">
-              <Text className="text-base font-bold text-white tracking-tight" numberOfLines={1}>
+            <View className="flex-row items-center space-x-1.5">
+              <Text className="text-sm font-bold text-white tracking-tight" numberOfLines={1}>
                 {displayTitle}
               </Text>
-              {trip?.status && (
+              {trip?.status && !title && (
                 <View className="bg-brand-500/15 border border-brand-500/30 px-1.5 py-0.5 rounded">
-                  <Text className="text-[10px] font-bold text-brand-400 uppercase">
+                  <Text className="text-[9px] font-bold text-brand-400 uppercase">
                     {trip.status}
                   </Text>
                 </View>
               )}
             </View>
             {displaySubtitle && (
-              <Text className="text-xs text-slate-400 mt-0.5" numberOfLines={1}>
+              <Text className="text-[11px] text-slate-400 mt-0.5 truncate" numberOfLines={1}>
                 {displaySubtitle}
               </Text>
             )}
@@ -114,15 +116,6 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, subtitle }) =
                 </Text>
               </View>
             )}
-          </TouchableOpacity>
-
-          {/* Create Trip Modal */}
-          <TouchableOpacity
-            onPress={handleOpenCreate}
-            activeOpacity={0.7}
-            className="p-2 rounded-lg bg-brand-600/90 border border-brand-500/40"
-          >
-            <PlusCircle color="#ffffff" size={15} />
           </TouchableOpacity>
         </View>
       </View>
