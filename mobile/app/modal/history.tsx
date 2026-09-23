@@ -1,9 +1,22 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Share } from 'react-native';
 import { useRouter } from 'expo-router';
-import { X, History, Copy, Trash2, Check, Plus, Calendar, MapPin } from 'lucide-react-native';
+import {
+  X,
+  History,
+  Copy,
+  Trash2,
+  Check,
+  Plus,
+  Calendar,
+  MapPin,
+  Share2,
+} from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useMobileTrip } from '../../context/MobileTripContext';
 import { useMobileI18n } from '../../context/MobileI18nContext';
+import { Trip } from '@domain/types';
+import { encodeTripToShareUrl, generateTripSummaryText } from '@services/sharing/shareService';
 
 export default function TripHistoryModal() {
   const router = useRouter();
@@ -17,12 +30,29 @@ export default function TripHistoryModal() {
   const { lang } = useMobileI18n();
 
   const handleSelect = (id: string) => {
+    Haptics.selectionAsync().catch(() => {});
     setActiveTrip(id);
     router.back();
   };
 
   const handleDuplicate = (id: string) => {
+    Haptics.selectionAsync().catch(() => {});
     duplicateTrip(id, lang === 'es' ? 'Copia' : 'Copy');
+  };
+
+  const handleShare = async (tripItem: Trip) => {
+    Haptics.selectionAsync().catch(() => {});
+    try {
+      const shareUrl = encodeTripToShareUrl(tripItem);
+      const summaryText = generateTripSummaryText(tripItem, lang, shareUrl);
+      await Share.share({
+        title: tripItem.name,
+        message: `${summaryText}\n\n${shareUrl}`,
+        url: shareUrl,
+      });
+    } catch (err) {
+      console.error('[TripHistoryModal] Error sharing trip:', err);
+    }
   };
 
   const handleDelete = (id: string, name: string) => {
@@ -36,7 +66,10 @@ export default function TripHistoryModal() {
         {
           text: lang === 'es' ? 'Eliminar' : 'Delete',
           style: 'destructive',
-          onPress: () => deleteTrip(id),
+          onPress: () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+            deleteTrip(id);
+          },
         },
       ]
     );
@@ -104,7 +137,7 @@ export default function TripHistoryModal() {
                   <View className="flex-row items-center space-x-1">
                     <Calendar color="#64748b" size={13} />
                     <Text className="text-xs text-slate-400">
-                      {item.startDate}
+                      {item.startDate} → {item.endDate}
                     </Text>
                   </View>
                   <View className="flex-row items-center space-x-1">
@@ -115,36 +148,53 @@ export default function TripHistoryModal() {
                   </View>
                 </View>
 
-                {/* Actions row */}
-                <View className="flex-row items-center justify-between pt-2 border-t border-slate-800/80">
+                {/* Actions row: Share, Duplicate, Delete, Activate */}
+                <View className="flex-row items-center justify-between pt-2.5 border-t border-slate-800/80">
                   <View className="flex-row space-x-2">
+                    {/* Share native button */}
+                    <TouchableOpacity
+                      onPress={() => handleShare(item)}
+                      className="p-2 rounded-lg bg-slate-950 border border-slate-800"
+                    >
+                      <Share2 color="#38bdf8" size={14} />
+                    </TouchableOpacity>
+
+                    {/* Duplicate button */}
                     <TouchableOpacity
                       onPress={() => handleDuplicate(item.id)}
-                      className="p-1.5 rounded-lg bg-slate-950 border border-slate-800"
+                      className="p-2 rounded-lg bg-slate-950 border border-slate-800"
                     >
                       <Copy color="#94a3b8" size={14} />
                     </TouchableOpacity>
 
+                    {/* Delete button (if more than 1 trip) */}
                     {savedTrips.length > 1 && (
                       <TouchableOpacity
                         onPress={() => handleDelete(item.id, item.name)}
-                        className="p-1.5 rounded-lg bg-slate-950 border border-red-900/40"
+                        className="p-2 rounded-lg bg-slate-950 border border-red-900/40"
                       >
                         <Trash2 color="#ef4444" size={14} />
                       </TouchableOpacity>
                     )}
                   </View>
 
-                  {!isActive && (
+                  {!isActive ? (
                     <TouchableOpacity
                       onPress={() => handleSelect(item.id)}
-                      className="bg-brand-600 px-3 py-1.5 rounded-lg flex-row items-center space-x-1"
+                      className="bg-brand-600 px-3.5 py-2 rounded-lg flex-row items-center space-x-1.5"
                     >
-                      <Check color="#ffffff" size={13} />
+                      <Check color="#ffffff" size={14} />
                       <Text className="text-xs font-bold text-white">
                         {lang === 'es' ? 'Activar' : 'Activate'}
                       </Text>
                     </TouchableOpacity>
+                  ) : (
+                    <View className="px-3 py-1.5 rounded-lg bg-brand-950/60 border border-brand-500/40 flex-row items-center space-x-1">
+                      <Check color="#10b981" size={12} />
+                      <Text className="text-xs font-semibold text-brand-400">
+                        {lang === 'es' ? 'En pantalla' : 'Current'}
+                      </Text>
+                    </View>
                   )}
                 </View>
               </View>
@@ -159,7 +209,7 @@ export default function TripHistoryModal() {
             router.push('/modal/create');
           }}
           activeOpacity={0.8}
-          className="bg-slate-900 border border-slate-800 rounded-xl py-3 flex-row items-center justify-center space-x-2 mb-8"
+          className="bg-slate-900 border border-slate-800 rounded-xl py-3.5 flex-row items-center justify-center space-x-2 mb-8"
         >
           <Plus color="#10b981" size={16} />
           <Text className="text-xs font-bold text-slate-200">

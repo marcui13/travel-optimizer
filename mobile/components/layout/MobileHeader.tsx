@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { Compass, Globe, History, PlusCircle } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, Share } from 'react-native';
+import { Compass, Globe, History, PlusCircle, Share2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useMobileTrip } from '../../context/MobileTripContext';
 import { useMobileI18n } from '../../context/MobileI18nContext';
+import { encodeTripToShareUrl, generateTripSummaryText } from '@services/sharing/shareService';
 
 interface MobileHeaderProps {
   title?: string;
@@ -27,6 +29,22 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, subtitle }) =
     router.push('/modal/create');
   };
 
+  const handleShare = async () => {
+    if (!trip) return;
+    Haptics.selectionAsync().catch(() => {});
+    try {
+      const shareUrl = encodeTripToShareUrl(trip);
+      const summaryText = generateTripSummaryText(trip, lang, shareUrl);
+      await Share.share({
+        title: trip.name,
+        message: `${summaryText}\n\n${shareUrl}`,
+        url: shareUrl,
+      });
+    } catch (err) {
+      console.error('[MobileHeader] Error sharing trip:', err);
+    }
+  };
+
   const displayTitle = title || trip?.name || 'Travel Optimizer';
   const displaySubtitle = subtitle || (trip ? `${trip.startDate} → ${trip.endDate}` : undefined);
 
@@ -34,7 +52,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, subtitle }) =
     <View className="bg-slate-950/95 border-b border-slate-800/80 px-4 pt-12 pb-3.5">
       <View className="flex-row items-center justify-between">
         {/* App & Trip Info */}
-        <View className="flex-1 mr-3 flex-row items-center space-x-3">
+        <View className="flex-1 mr-2 flex-row items-center space-x-2.5">
           <View className="w-9 h-9 rounded-xl bg-brand-500/20 items-center justify-center border border-brand-500/30">
             <Compass color="#10b981" size={20} />
           </View>
@@ -60,7 +78,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, subtitle }) =
         </View>
 
         {/* Quick Action Buttons */}
-        <View className="flex-row items-center space-x-2">
+        <View className="flex-row items-center space-x-1.5">
           {/* Language Switch */}
           <TouchableOpacity
             onPress={toggleLanguage}
@@ -73,13 +91,22 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, subtitle }) =
             </Text>
           </TouchableOpacity>
 
+          {/* Share Trip Button */}
+          <TouchableOpacity
+            onPress={handleShare}
+            activeOpacity={0.7}
+            className="p-2 rounded-lg bg-slate-900 border border-slate-800"
+          >
+            <Share2 color="#94a3b8" size={15} />
+          </TouchableOpacity>
+
           {/* Trip History Modal */}
           <TouchableOpacity
             onPress={handleOpenHistory}
             activeOpacity={0.7}
             className="relative p-2 rounded-lg bg-slate-900 border border-slate-800"
           >
-            <History color="#94a3b8" size={16} />
+            <History color="#94a3b8" size={15} />
             {savedTrips.length > 1 && (
               <View className="absolute -top-1 -right-1 bg-brand-500 rounded-full w-4 h-4 items-center justify-center">
                 <Text className="text-[9px] font-black text-slate-950">
@@ -95,7 +122,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ title, subtitle }) =
             activeOpacity={0.7}
             className="p-2 rounded-lg bg-brand-600/90 border border-brand-500/40"
           >
-            <PlusCircle color="#ffffff" size={16} />
+            <PlusCircle color="#ffffff" size={15} />
           </TouchableOpacity>
         </View>
       </View>
