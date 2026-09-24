@@ -5,9 +5,16 @@ import { shiftTripDates, resetTripToCleanState } from '../../domain/tripHelpers'
 export const STORAGE_KEY_TRIPS_LIBRARY = 'travel_optimizer_trips_library_v2';
 export const STORAGE_KEY_ACTIVE_TRIP_ID = 'travel_optimizer_active_trip_id_v2';
 
+export interface StorageDriver {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+  clear?(): void;
+}
+
 const memoryStore = new Map<string, string>();
 
-function getStorage() {
+function getStorage(): StorageDriver {
   if (typeof window !== 'undefined' && window.localStorage) {
     return window.localStorage;
   }
@@ -24,6 +31,7 @@ function getStorage() {
 
 export class TripStorageService {
   private static instance: TripStorageService;
+  private customDriver: StorageDriver | null = null;
 
   private constructor() {}
 
@@ -35,11 +43,25 @@ export class TripStorageService {
   }
 
   /**
+   * Sets or clears a custom storage driver (e.g., MMKV on mobile or test mock).
+   */
+  public setStorageDriver(driver: StorageDriver | null): void {
+    this.customDriver = driver;
+  }
+
+  /**
+   * Gets the active storage driver.
+   */
+  public getStorageDriver(): StorageDriver {
+    return this.customDriver || getStorage();
+  }
+
+  /**
    * Loads all saved trips from localStorage. If empty or corrupt, seeds with default library.
    */
   public loadTripHistory(): Trip[] {
     try {
-      const storage = getStorage();
+      const storage = this.getStorageDriver();
       const raw = storage.getItem(STORAGE_KEY_TRIPS_LIBRARY);
       if (raw) {
         const parsed = JSON.parse(raw);
@@ -61,7 +83,7 @@ export class TripStorageService {
    */
   public saveTripHistory(trips: Trip[]): void {
     try {
-      const storage = getStorage();
+      const storage = this.getStorageDriver();
       storage.setItem(STORAGE_KEY_TRIPS_LIBRARY, JSON.stringify(trips));
     } catch (e) {
       console.warn('Error saving trips library to localStorage', e);
@@ -73,7 +95,7 @@ export class TripStorageService {
    */
   public getActiveTripId(trips: Trip[]): string {
     try {
-      const storage = getStorage();
+      const storage = this.getStorageDriver();
       const id = storage.getItem(STORAGE_KEY_ACTIVE_TRIP_ID);
       if (id && trips.some((t) => t.id === id)) {
         return id;
@@ -89,7 +111,7 @@ export class TripStorageService {
    */
   public setActiveTripId(id: string): void {
     try {
-      const storage = getStorage();
+      const storage = this.getStorageDriver();
       storage.setItem(STORAGE_KEY_ACTIVE_TRIP_ID, id);
     } catch {
       // ignore

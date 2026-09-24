@@ -13,6 +13,7 @@ import { validateTrip } from './domain/validation';
 import { I18nProvider, useI18n } from './i18n/I18nContext';
 import { Header } from './components/layout/Header';
 import { StatsBar } from './components/layout/StatsBar';
+import { Footer } from './components/layout/Footer';
 import { InteractiveMap } from './components/map/InteractiveMap';
 import { TimelineView } from './components/itinerary/TimelineView';
 import { CalendarView } from './components/calendar/CalendarView';
@@ -27,13 +28,18 @@ import { ValidationIssuesModal } from './components/modals/ValidationIssuesModal
 import { TripHistoryModal } from './components/modals/TripHistoryModal';
 import { ResetTripModal } from './components/modals/ResetTripModal';
 import { ShareModal } from './components/modals/ShareModal';
+import { ExportToCalendarModal } from './components/modals/ExportToCalendarModal';
 import { SharedTripPreviewModal } from './components/modals/SharedTripPreviewModal';
 import { CollabNotificationToast, CollabToastData } from './components/common/CollabNotificationToast';
 import { CompletedTripBanner } from './components/layout/CompletedTripBanner';
 import { VisionExtractionResult } from './services/ai/visionExtractor';
 import { defaultOptimizer } from './services/optimization/optimizer';
 import { tripStorage } from './services/storage/tripStorageService';
-import { decodeTripFromShareUrl, extractSharePayloadFromLocation } from './services/sharing/shareService';
+import {
+  decodeTripFromShareUrl,
+  extractSharePayloadFromLocation,
+  validateAndSanitizeTripJson,
+} from './services/sharing/shareService';
 import { collabEngine } from './services/collaboration/collabEngine';
 import { CollaborationState } from './services/collaboration/types';
 import {
@@ -42,6 +48,7 @@ import {
   ShieldAlert,
   Map as MapIcon,
   SlidersHorizontal,
+  UploadCloud,
 } from 'lucide-react';
 
 const initialSharedTrip: Trip | null = (() => {
@@ -58,7 +65,7 @@ const initialSharedTrip: Trip | null = (() => {
 })();
 
 const AppInner: React.FC = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
 
   // 1. Persistent Trips Library
   const [savedTrips, setSavedTrips] = useState<Trip[]>(() => {
@@ -149,11 +156,14 @@ const AppInner: React.FC = () => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isResetOpen, setIsResetOpen] = useState(false);
   const [tripToReset, setTripToReset] = useState<Trip | null>(null);
+  const [isExportCalendarOpen, setIsExportCalendarOpen] = useState(false);
 
   // Sharing & Collaboration State
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [shareInitialTab, setShareInitialTab] = useState<'share' | 'collab'>('share');
   const [sharedTripToPreview, setSharedTripToPreview] = useState<Trip | null>(null);
+  const [sharedTripSourceType, setSharedTripSourceType] = useState<'link' | 'file'>('link');
+  const [isDraggingJsonFile, setIsDraggingJsonFile] = useState(false);
   const [collabState, setCollabState] = useState<CollaborationState>(() => collabEngine.getState());
   const [collabToast, setCollabToast] = useState<CollabToastData | null>(null);
 
@@ -442,17 +452,31 @@ const AppInner: React.FC = () => {
   };
 
   const handleAcceptSharedTrip = (trip: Trip) => {
-    const updated = tripStorage.upsertTripInHistory(trip);
-    tripStorage.setActiveTripId(trip.id);
+    let tripToSave = trip;
+    if (sharedTripSourceType === 'file' && savedTrips.some((t) => t.id === trip.id)) {
+      tripToSave = {
+        ...trip,
+        id: `trip-${Date.now()}`,
+      };
+    }
+    const updated = tripStorage.upsertTripInHistory(tripToSave);
+    tripStorage.setActiveTripId(tripToSave.id);
     setSavedTrips(updated);
-    setActiveTripId(trip.id);
-    setHistory([trip]);
+    setActiveTripId(tripToSave.id);
+    setHistory([tripToSave]);
     setHistoryIndex(0);
     handleClearSelection();
     setSharedTripToPreview(null);
     if (window.location.hash.startsWith('#share=')) {
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
+    setCollabToast({
+      id: `toast-${Date.now()}`,
+      senderName: lang === 'es' ? 'Itinerario Guardado' : 'Itinerary Saved',
+      senderColor: '#10b981',
+      message: lang === 'es' ? `¡"${tripToSave.name}" se guardó en tus viajes!` : `"${tripToSave.name}" was saved to your trips!`,
+      type: 'update',
+    });
   };
 
   const handleViewOnlySharedTrip = (trip: Trip) => {
@@ -465,13 +489,112 @@ const AppInner: React.FC = () => {
     }
   };
 
+  const handleImportTripFromFile = (file: File) => {
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.json') && file.type && !file.type.includes('json')) {
+      setCollabToast({
+        id: `err-${Date.now()}`,
+        senderName: lang === 'es' ? 'Archivo no válido' : 'Invalid File',
+        senderColor: '#ef4444',
+        message: lang === 'es' ? 'Por favor selecciona un archivo con formato .json' : 'Please select a valid .json file',
+        type: 'update',
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      const result = validateAndSanitizeTripJson(content);
+      if (result.success && result.trip) {
+        setSharedTripSourceType('file');
+        setSharedTripToPreview(result.trip);
+        setIsHistoryOpen(false);
+        setIsShareOpen(false);
+      } else {
+        setCollabToast({
+          id: `err-${Date.now()}`,
+          senderName: lang === 'es' ? 'Error al importar' : 'Import Error',
+          senderColor: '#ef4444',
+          message: result.error || (lang === 'es' ? 'El archivo JSON no contiene un itinerario válido.' : 'The JSON file does not contain a valid itinerary.'),
+          type: 'update',
+        });
+      }
+    };
+    reader.onerror = () => {
+      setCollabToast({
+        id: `err-${Date.now()}`,
+        senderName: lang === 'es' ? 'Error de lectura' : 'Read Error',
+        senderColor: '#ef4444',
+        message: lang === 'es' ? 'No se pudo leer el archivo seleccionado.' : 'Could not read the selected file.',
+        type: 'update',
+      });
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer?.types?.includes('Files')) {
+      setIsDraggingJsonFile(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDraggingJsonFile(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingJsonFile(false);
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      handleImportTripFromFile(files[0]);
+    }
+  };
+
   const handleOpenShare = (tab: 'share' | 'collab' = 'share') => {
     setShareInitialTab(tab);
     setIsShareOpen(true);
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200 relative"
+    >
+      {/* Global Drag & Drop .json Overlay */}
+      {isDraggingJsonFile && (
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-fade-in"
+        >
+          <div className="border-2 border-dashed border-emerald-500/80 rounded-3xl p-10 max-w-md w-full flex flex-col items-center justify-center text-center bg-slate-900/60 shadow-2xl space-y-4 pointer-events-none">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 animate-bounce shadow-lg shadow-emerald-500/10">
+              <UploadCloud className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-100">
+                {t.modals.importTrip.dropOverlayTitle}
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                {t.modals.importTrip.dropOverlaySubtitle}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 1. App Header */}
       <Header
         trip={currentTrip}
@@ -492,6 +615,7 @@ const AppInner: React.FC = () => {
         onOpenResetModal={() => handleOpenResetForTrip(currentTrip)}
         onResetToDemoTrip={handleResetToDemo}
         onOpenShareModal={handleOpenShare}
+        onImportTripFile={handleImportTripFromFile}
       />
 
       {/* Completed Trip Notification Banner */}
@@ -556,6 +680,7 @@ const AppInner: React.FC = () => {
               trip={currentTrip}
               selectedDayDate={selectedDayDate}
               onSelectDay={handleSelectDay}
+              onOpenExportCalendar={() => setIsExportCalendarOpen(true)}
             />
           </div>
         )}
@@ -723,6 +848,7 @@ const AppInner: React.FC = () => {
                       trip={currentTrip}
                       selectedDayDate={selectedDayDate}
                       onSelectDay={handleSelectDay}
+                      onOpenExportCalendar={() => setIsExportCalendarOpen(true)}
                     />
                   </div>
                 )}
@@ -822,7 +948,10 @@ const AppInner: React.FC = () => {
         )}
       </main>
 
-      {/* 4. Modals */}
+      {/* 4. Footer */}
+      <Footer />
+
+      {/* 5. Modals */}
       <CreateTripModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
@@ -848,6 +977,7 @@ const AppInner: React.FC = () => {
         onOpenResetModal={handleOpenResetForTrip}
         onOpenCreateModal={() => setIsCreateOpen(true)}
         onSaveCurrentAsCopy={handleSaveCurrentAsCopy}
+        onImportTripFile={handleImportTripFromFile}
       />
 
       {tripToReset && (
@@ -908,6 +1038,14 @@ const AppInner: React.FC = () => {
         onClose={() => setIsShareOpen(false)}
         trip={currentTrip}
         initialTab={shareInitialTab}
+        onImportTripFile={handleImportTripFromFile}
+        onOpenExportCalendar={() => setIsExportCalendarOpen(true)}
+      />
+
+      <ExportToCalendarModal
+        isOpen={isExportCalendarOpen}
+        onClose={() => setIsExportCalendarOpen(false)}
+        trip={currentTrip}
       />
 
       {sharedTripToPreview && (
@@ -922,6 +1060,7 @@ const AppInner: React.FC = () => {
           sharedTrip={sharedTripToPreview}
           onAcceptAndSave={handleAcceptSharedTrip}
           onViewOnly={handleViewOnlySharedTrip}
+          sourceType={sharedTripSourceType}
         />
       )}
 

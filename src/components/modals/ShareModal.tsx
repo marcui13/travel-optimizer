@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Trip } from '../../domain/types';
 import { useI18n } from '../../i18n/I18nContext';
 import { useModalA11y } from '../../hooks/useModalA11y';
@@ -8,6 +8,7 @@ import {
   Copy,
   Check,
   Download,
+  Upload,
   MessageCircle,
   X,
   Radio,
@@ -17,6 +18,8 @@ import {
   ArrowRight,
   ShieldCheck,
   ExternalLink,
+  Calendar,
+  CalendarPlus,
 } from 'lucide-react';
 import {
   encodeTripToShareUrl,
@@ -33,6 +36,8 @@ interface ShareModalProps {
   onClose: () => void;
   trip: Trip;
   initialTab?: 'share' | 'collab';
+  onImportTripFile?: (file: File) => void;
+  onOpenExportCalendar?: () => void;
 }
 
 const AVATAR_COLORS = [
@@ -50,6 +55,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   onClose,
   trip,
   initialTab = 'share',
+  onImportTripFile,
+  onOpenExportCalendar,
 }) => {
   const { lang, t } = useI18n();
   const modalRef = useModalA11y(isOpen, onClose);
@@ -59,6 +66,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [copiedCollabLink, setCopiedCollabLink] = useState(false);
   const [showQrCode, setShowQrCode] = useState(false);
+  const importFileInputRef = useRef<HTMLInputElement>(null);
 
   // Collab state
   const [collabState, setCollabState] = useState<CollaborationState>(collabEngine.getState());
@@ -334,26 +342,98 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               </div>
             )}
 
-            {/* Export file option */}
-            <div className="p-3 rounded-xl bg-slate-950/50 border border-slate-800 flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-slate-200 text-xs">
-                  {lang === 'es' ? 'Descargar archivo de viaje (.json)' : 'Download travel file (.json)'}
+            {/* Google Calendar & iCal Export Card */}
+            {onOpenExportCalendar && (
+              <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-950/40 via-indigo-950/20 to-slate-950/60 border border-blue-800/40 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+                    <CalendarPlus className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-200 text-xs">
+                      {lang === 'es' ? 'Google Calendar & Apple / Outlook (.ics)' : 'Google Calendar & Apple / Outlook (.ics)'}
+                    </div>
+                    <div className="text-[10px] text-slate-400 truncate">
+                      {lang === 'es'
+                        ? 'Pasa tus paradas, trenes y vuelos a tu calendario'
+                        : 'Pass your stops, trains, and flights to your calendar'}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-[10px] text-slate-400">
-                  {lang === 'es'
-                    ? 'Exporta el itinerario completo para copias de seguridad o importar en otro equipo'
-                    : 'Export the complete itinerary for offline backups or importing elsewhere'}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenExportCalendar();
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-1.5 shrink-0 transition-colors shadow-sm shadow-blue-500/20 cursor-pointer"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>{lang === 'es' ? 'Exportar' : 'Export'}</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleExportJson}
-                className="px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 font-medium text-xs flex items-center gap-1.5 transition-colors shrink-0"
-              >
-                <Download className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{lang === 'es' ? 'Descargar' : 'Download'}</span>
-              </button>
+            )}
+
+            {/* Export & Import Files Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Export file option */}
+              <div className="p-3 rounded-xl bg-slate-950/50 border border-slate-800 flex flex-col justify-between gap-2.5">
+                <div>
+                  <div className="font-semibold text-slate-200 text-xs">
+                    {lang === 'es' ? 'Descargar archivo (.json)' : 'Download travel file (.json)'}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">
+                    {lang === 'es'
+                      ? 'Exporta el itinerario para compartirlo o hacer backup'
+                      : 'Export itinerary for sharing or offline backups'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleExportJson}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{lang === 'es' ? 'Descargar .json' : 'Download .json'}</span>
+                </button>
+              </div>
+
+              {/* Import file option */}
+              {onImportTripFile && (
+                <div className="p-3 rounded-xl bg-slate-950/50 border border-slate-800 flex flex-col justify-between gap-2.5">
+                  <input
+                    type="file"
+                    ref={importFileInputRef}
+                    accept=".json,application/json"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        onImportTripFile(file);
+                        e.target.value = '';
+                      }
+                    }}
+                  />
+                  <div>
+                    <div className="font-semibold text-slate-200 text-xs">
+                      {lang === 'es' ? 'Importar archivo (.json)' : 'Import travel file (.json)'}
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">
+                      {lang === 'es'
+                        ? 'Abre un archivo de viaje exportado por otro usuario'
+                        : 'Open an itinerary file exported by another user'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => importFileInputRef.current?.click()}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-blue-400" />
+                    <span>{lang === 'es' ? 'Importar .json' : 'Import .json'}</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

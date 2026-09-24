@@ -1,0 +1,26 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "jsxImportSource": "nativewind",
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "@domain/*": [
+        "../src/domain/*"
+      ],
+      "@services/*": [
+        "../src/services/*"
+      ],
+      "@i18n/*": [
+        "../src/i18n/*"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "nativewind-env.d.ts"
+  ]
+}

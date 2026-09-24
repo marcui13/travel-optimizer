@@ -1,19 +1,21 @@
 import React from 'react';
 import { Trip } from '../../domain/types';
 import { useI18n } from '../../i18n/I18nContext';
-import { Train, Ticket, MapPin, Calendar as CalendarIcon } from 'lucide-react';
+import { Train, Ticket, MapPin, Calendar as CalendarIcon, CalendarPlus } from 'lucide-react';
 import { parseISO, format } from 'date-fns';
 
 interface CalendarViewProps {
   trip: Trip;
   selectedDayDate?: string | null;
   onSelectDay?: (date: string, destinationId?: string) => void;
+  onOpenExportCalendar?: () => void;
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   trip,
   selectedDayDate,
   onSelectDay,
+  onOpenExportCalendar,
 }) => {
   const { t, dateLocale } = useI18n();
   const days = trip.itinerary.days;
@@ -49,19 +51,32 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             {trip.startDate} to {trip.endDate} • {days.length} {t.calendar.totalDays}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-          <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded bg-emerald-600/40 border border-emerald-500"></span>{' '}
-            {t.calendar.stay}
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded bg-blue-600/40 border border-blue-500"></span>{' '}
-            {t.calendar.transit}
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded bg-amber-600/40 border border-amber-500"></span>{' '}
-            {t.calendar.commitment}
-          </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded bg-emerald-600/40 border border-emerald-500"></span>{' '}
+              {t.calendar.stay}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded bg-blue-600/40 border border-blue-500"></span>{' '}
+              {t.calendar.transit}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded bg-amber-600/40 border border-amber-500"></span>{' '}
+              {t.calendar.commitment}
+            </span>
+          </div>
+          {onOpenExportCalendar && (
+            <button
+              type="button"
+              onClick={onOpenExportCalendar}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-500/40 hover:border-blue-500/60 transition-colors shadow-sm cursor-pointer ml-auto sm:ml-0"
+              title={t.calendar.exportGoogleCalendar}
+            >
+              <CalendarPlus className="w-3.5 h-3.5 text-blue-400" />
+              <span>{t.calendar.exportGoogleCalendar}</span>
+            </button>
+          )}
         </div>
       </div>
 

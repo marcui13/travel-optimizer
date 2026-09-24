@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Trip } from '../../domain/types';
 import { useI18n } from '../../i18n/I18nContext';
 import { isTripCompleted } from '../../domain/tripHelpers';
@@ -6,6 +6,7 @@ import {
   Compass,
   Plus,
   UploadCloud,
+  FileJson,
   RotateCcw,
   RotateCw,
   Settings,
@@ -36,6 +37,7 @@ interface HeaderProps {
   onOpenResetModal: () => void;
   onResetToDemoTrip: () => void;
   onOpenShareModal: (tab?: 'share' | 'collab') => void;
+  onImportTripFile?: (file: File) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -57,8 +59,10 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenResetModal,
   onResetToDemoTrip,
   onOpenShareModal,
+  onImportTripFile,
 }) => {
   const { lang, setLang, t } = useI18n();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <header className="bg-slate-900 border-b border-slate-800 px-3 sm:px-4 py-2 sm:py-2.5 sticky top-0 z-30 flex flex-col sm:block">
@@ -240,6 +244,33 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden 2xl:inline">{t.header.ingestDocuments}</span>
           </button>
 
+          {/* Quick Import .json (Desktop/Tablet) */}
+          {onImportTripFile && (
+            <>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".json,application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    onImportTripFile(file);
+                    e.target.value = '';
+                  }
+                }}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                title={t.modals.importTrip.buttonTooltip}
+                className="hidden sm:flex bg-slate-800 hover:bg-slate-750 text-slate-200 p-1.5 xl:px-2.5 xl:py-1.5 rounded-lg text-xs font-medium items-center gap-1.5 transition-colors border border-slate-700 shadow-xs"
+              >
+                <FileJson className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span className="hidden 2xl:inline">{t.header.importTripJson}</span>
+              </button>
+            </>
+          )}
+
           {/* Trip History Library (Desktop/Tablet) */}
           <button
             onClick={onOpenHistoryModal}
@@ -339,6 +370,18 @@ export const Header: React.FC<HeaderProps> = ({
             <UploadCloud className="w-3 h-3 text-blue-400" />
             <span>Doc</span>
           </button>
+
+          {/* Quick Import .json (Mobile) */}
+          {onImportTripFile && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              title={t.header.importTripJson}
+              className="p-1 px-2 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[10px] flex items-center gap-1 shrink-0 font-medium"
+            >
+              <FileJson className="w-3 h-3 text-blue-400" />
+              <span>JSON</span>
+            </button>
+          )}
 
           {/* Reset Trip (Mobile) */}
           <button

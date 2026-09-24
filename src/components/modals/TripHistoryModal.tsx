@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Trip } from '../../domain/types';
 import { useI18n } from '../../i18n/I18nContext';
 import { isTripCompleted } from '../../domain/tripHelpers';
@@ -15,6 +15,7 @@ import {
   MapPin,
   Clock,
   ArrowRight,
+  Upload,
 } from 'lucide-react';
 import { useModalA11y } from '../../hooks/useModalA11y';
 
@@ -29,6 +30,7 @@ interface TripHistoryModalProps {
   onOpenResetModal: (trip: Trip) => void;
   onOpenCreateModal: () => void;
   onSaveCurrentAsCopy?: () => void;
+  onImportTripFile?: (file: File) => void;
 }
 
 export const TripHistoryModal: React.FC<TripHistoryModalProps> = ({
@@ -42,12 +44,22 @@ export const TripHistoryModal: React.FC<TripHistoryModalProps> = ({
   onOpenResetModal,
   onOpenCreateModal,
   onSaveCurrentAsCopy,
+  onImportTripFile,
 }) => {
   const { t } = useI18n();
   const containerRef = useModalA11y(isOpen, onClose);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'completed'>('all');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onImportTripFile) {
+      onImportTripFile(file);
+      e.target.value = '';
+    }
+  };
 
   const filteredTrips = useMemo(() => {
     return trips.filter((trip) => {
@@ -175,7 +187,17 @@ export const TripHistoryModal: React.FC<TripHistoryModalProps> = ({
           {filteredTrips.length === 0 ? (
             <div className="text-center py-12 px-4 bg-slate-950/40 rounded-xl border border-slate-800/60">
               <FolderClock className="w-10 h-10 text-slate-600 mx-auto mb-3 opacity-60" />
-              <p className="text-sm text-slate-400">{t.modals.history.noTripsFound}</p>
+              <p className="text-sm text-slate-400 mb-3">{t.modals.history.noTripsFound}</p>
+              {onImportTripFile && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5 text-blue-400" />
+                  <span>{t.modals.history.importTripFile}</span>
+                </button>
+              )}
             </div>
           ) : (
             filteredTrips.map((trip) => {
@@ -335,6 +357,27 @@ export const TripHistoryModal: React.FC<TripHistoryModalProps> = ({
         {/* Modal Footer Controls */}
         <div className="p-4 border-t border-slate-800 bg-slate-950/70 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
+            {onImportTripFile && (
+              <>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".json,application/json"
+                  className="hidden"
+                  onChange={handleFileInputChange}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  title={t.modals.importTrip.buttonTooltip}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700"
+                >
+                  <Upload className="w-3.5 h-3.5 text-blue-400" />
+                  <span>{t.modals.history.importTripFile}</span>
+                </button>
+              </>
+            )}
+
             {onSaveCurrentAsCopy && (
               <button
                 onClick={onSaveCurrentAsCopy}

@@ -46,4 +46,27 @@ describe('TripStorageService', () => {
     expect(updatedTrip?.startDate).toBe('2026-09-01');
     expect(updatedTrip?.status).toBe('planned');
   });
+
+  it('allows injecting a custom StorageDriver (e.g. MMKV or isolated store)', () => {
+    const customMap = new Map<string, string>();
+    const mockDriver = {
+      getItem: (key: string) => customMap.get(key) || null,
+      setItem: (key: string, value: string) => customMap.set(key, value),
+      removeItem: (key: string) => customMap.delete(key),
+      clear: () => customMap.clear(),
+    };
+
+    service.setStorageDriver(mockDriver);
+    expect(service.getStorageDriver()).toBe(mockDriver);
+
+    // Save and load trips via custom driver
+    const trips = service.loadTripHistory();
+    expect(trips.length).toBeGreaterThanOrEqual(3);
+    expect(customMap.size).toBe(1); // saved initial library
+    service.setActiveTripId('custom-active-id');
+    expect(customMap.get('travel_optimizer_active_trip_id_v2')).toBe('custom-active-id');
+
+    // Reset back to null
+    service.setStorageDriver(null);
+  });
 });
